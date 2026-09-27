@@ -6,7 +6,7 @@
 
 ## 在线查看
 
-启用 GitHub Pages 后访问：`https://<你的用户名>.github.io/<仓库名>/`
+在线访问：<https://lipinzhe.github.io/starway/>
 
 本地查看：直接双击 `index.html` 即可（不需要安装依赖、服务器或 API）。
 
