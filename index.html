@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#05070b">
+  <meta name="description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
+  <title>探索之路 · 个人简历</title>
+  <link rel="stylesheet" href="assets/route.css">
+  <link rel="stylesheet" href="assets/monitors.css">
+</head>
+<body>
+  <!-- Confirmed: scroll controls travel; the mouse (or a touch drag) turns the camera
+       left/right and up/down while a centre crosshair aims; roadside screens open in
+       place when aimed at. The sky is a panorama that turns with the view and road.
+       Auto travel is optional. Identity, affiliation, email and CV remain unfilled. -->
+  <a class="skip-link" href="#journey">跳到道路</a>
+  <div class="universe" aria-hidden="true"><canvas id="skyCanvas"></canvas><canvas id="roadCanvas"></canvas><div class="vignette"></div></div>
+  <div class="reticle" id="reticle" aria-hidden="true" data-state="none"><i></i><i></i><i></i><i></i><b></b></div>
+
+  <header class="masthead">
+    <a class="identity" href="#identity" data-go="0">
+      <span class="identity-symbol" aria-hidden="true"><i></i></span>
+      <span><strong>你的姓名</strong><small>COMPUTER VISION</small></span>
+    </a>
+    <nav class="navigation" aria-label="控制">
+      <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="自动前进"><span aria-hidden="true">▶</span><b>AUTO</b></button>
+    </nav>
+  </header>
+
+  <main id="journey">
+    <div class="scene-content" id="sceneContent">
+      <div class="introduction" id="intro">
+        <p class="eyebrow"><span></span> A JOURNEY IN VISION</p>
+        <h1>循光，<br><em>向未知。</em></h1>
+        <p class="intro-copy">关于计算机视觉，<br>以及沿途的研究与探索。</p>
+      </div>
+      <div class="world-signs" id="worldSigns" aria-label="道路两侧的信息路牌">
+        <article class="world-sign" data-sign-index="0" data-side="1" data-station="0" tabindex="0" aria-label="关于我">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>01 / ABOUT</span><span class="beacon" aria-hidden="true"></span></div><h2>从这里认识我</h2><p class="sign-summary">计算机视觉 · 研究与持续探索</p><div class="sign-expand"><p>我关注如何在复杂图像中定位对象、理解结构。农业是目前参与的应用场景之一。</p><dl><div><dt>研究</dt><dd>计算机视觉</dd></div><div><dt>单位</dt><dd class="unfilled">待补充</dd></div></dl></div><span class="sign-action">转动视角查看</span>
+        </article>
+        <article class="world-sign" data-sign-index="1" data-side="-1" data-station=".34" tabindex="0" aria-label="CornPheno 公开研究">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>02 / RESEARCH</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPheno</h2><p class="sign-summary">以点查询定位籽粒，理解空间结构。</p><div class="sign-expand"><p>Phenotyping corn ear kernels in the wild via point query transformer.</p><p class="sign-meta">Plant Phenomics · 2025 · 已发表</p><p>通过点查询定位玉米穗上的籽粒，再由点的空间关系提取行结构。</p><dl><div><dt>我的角色</dt><dd>主导大部分研究工作</dd></div></dl><a href="https://doi.org/10.1016/j.plaphe.2025.100129" target="_blank" rel="noopener noreferrer">阅读公开论文 ↗</a></div><span class="sign-action">转动视角查看</span>
+        </article>
+        <article class="world-sign" data-sign-index="2" data-side="1" data-station=".67" tabindex="0" aria-label="正在推进的工作">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>03 / IN PROGRESS</span><span class="beacon" aria-hidden="true"></span></div><h2>下一段探索</h2><p class="sign-summary">CornPheno 2.0 / CornPET · 撰写中</p><div class="sign-expand"><p>正在推进 CornPheno 2.0 与 CornPET 模型升级相关工作。</p><p class="sign-meta">具体结果与公开材料待补充。</p></div><span class="sign-action">转动视角查看</span>
+        </article>
+        <article class="world-sign" data-sign-index="3" data-side="-1" data-station="1" tabindex="0" aria-label="联系方式">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>04 / CONTACT</span><span class="beacon" aria-hidden="true"></span></div><h2>保持联系</h2><p class="sign-summary">让研究、合作与交流在这里相遇。</p><div class="sign-expand"><p>联系方式与正式 CV 还没有填入，补充真实信息后即可接入。</p><div class="contact-placeholder"><span>CONTACT</span><strong>联系方式待补充</strong><span aria-hidden="true">↗</span></div></div><span class="sign-action">转动视角查看</span>
+        </article>
+      </div>
+    </div>
+
+    <div class="scroll-runway" aria-hidden="true">
+      <span id="identity"></span><span id="research"></span><span id="work"></span><span id="contact"></span>
+    </div>
+    <noscript><div class="no-script"><h1>你的姓名 · 计算机视觉</h1><p>此道路体验需要启用 JavaScript。研究记录：CornPheno，Plant Phenomics，2025。CornPheno 2.0 / CornPET 升级文章撰写中。身份与联系方式待补充。</p><a href="https://doi.org/10.1016/j.plaphe.2025.100129">公开论文</a></div></noscript>
+  </main>
+
+  <footer class="travel-bar">
+    <nav class="route-map" aria-label="旅程进度">
+      <div class="route-line" aria-hidden="true"><i id="progressFill"></i></div>
+      <button type="button" data-go="0" class="route-stop is-current" aria-current="step" aria-label="第一段"></button>
+      <button type="button" data-go="1" class="route-stop" aria-label="第二段"></button>
+      <button type="button" data-go="2" class="route-stop" aria-label="第三段"></button>
+      <button type="button" data-go="3" class="route-stop" aria-label="第四段"></button>
+    </nav>
+    <div class="scene-tools"><button id="sceneryButton" type="button" aria-pressed="false" aria-label="隐藏路牌">◌</button><button id="motionButton" type="button" aria-pressed="false" aria-label="暂停动态">Ⅱ</button><span id="progressText">0%</span></div>
+  </footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="assets/space-panorama-data.js"></script>
+  <script src="assets/sky-panorama.js"></script>
+  <script src="assets/road-scene.js"></script>
+  <script src="assets/monitors.js"></script>
+  <script src="assets/journey.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+/* The sky is a fixed, independently painted distant layer. */
+#skyCanvas,#roadCanvas{position:absolute;inset:0;display:block;width:100%;height:100%}
+#skyCanvas{z-index:0;transform:none!important}
+#roadCanvas{z-index:1;transform:none!important}
+.vignette{z-index:2}
+body{touch-action:pan-y}
+.world-signs{perspective:none;overflow:hidden}
+.world-sign{
+  left:0;top:0;margin:0;padding:17px 20px;transform-origin:0 0;
+  transform-style:flat;backface-visibility:hidden;overflow:hidden;
+  transition:opacity .2s,filter .2s;
+  border:1px solid #9caeaf88;border-radius:5px;
+  background:linear-gradient(145deg,#151e27f5,#080e16f5);
+  box-shadow:inset 0 0 0 3px #050910,0 6px 18px #0008;
+  backdrop-filter:none;filter:none;opacity:0;pointer-events:none;
+}
+.world-sign.is-visible,.world-sign[data-sign-index="0"]:not(.is-focused){opacity:var(--distance-alpha,.7)}
+.world-sign.is-visible{pointer-events:auto}
+.world-sign.is-focused{opacity:1;filter:none;border-color:#d6ba96}
+.world-sign::before{inset:4px;opacity:.2;border:1px solid #97b0be33;background:none}
+.world-sign::after,.world-sign .sign-post{display:none}
+.world-sign .sign-head{margin-bottom:12px;font-size:12px;color:#ccbaaa}
+.world-sign h2{margin:0;font-size:23px;line-height:1.3;font-weight:500}
+.world-sign .sign-summary{font-size:14px;line-height:1.65;margin:9px 0 0;color:#d4d9db}
+.world-sign .sign-expand,.world-sign.is-focused .sign-expand{
+  max-height:none;margin-top:15px;padding-top:14px;border-top:1px solid #acc0c32e;
+  opacity:var(--opening,0);overflow:visible;transition:none;
+}
+.world-sign .sign-expand p{font-size:16px;line-height:1.7;margin:0 0 13px;color:#d9e0e3}
+.world-sign .sign-expand .sign-meta{font:12px/1.7 var(--mono);color:#d2b797}
+.world-sign .sign-expand dl div{font-size:14px;line-height:1.6;grid-template-columns:70px 1fr;padding:10px 0}
+.world-sign .sign-expand a{font-size:15px;padding:7px 0;color:#efc798}
+.world-sign .contact-placeholder{padding:15px;border-color:#b6c1ca55}
+.world-sign .contact-placeholder strong{font-size:17px}
+.world-sign .sign-action{display:none}
+.world-sign:focus-visible{outline:2px solid #e8cba8;outline-offset:2px}
+.introduction{transition:opacity .15s;pointer-events:none}
+.introduction .start-link{pointer-events:auto}
+/* Tall tablets: lift the title into the open sky above the first gantries. */
+@media(min-width:761px) and (orientation:portrait){.introduction{top:14%}}
+@media(max-width:760px){
+  .world-sign{padding:15px 17px}
+  .world-sign h2{font-size:22px}
+  .world-sign .sign-summary{font-size:14px}
+  .world-sign .sign-expand p{font-size:15px}
+}
+@media(prefers-reduced-motion:reduce){.world-sign{transition:none}.introduction{transition:none}}
+@media(max-height:549px) and (orientation:landscape){
+  .world-sign{padding:16px 18px}
+  .world-sign .sign-head,.world-sign h2,.world-sign .sign-summary{width:156px}
+  .world-sign h2{font-size:24px;line-height:1.4}
+  .world-sign .sign-summary{font-size:16px;line-height:1.6}
+  .world-sign .sign-expand,.world-sign.is-focused .sign-expand{
+    position:absolute;top:16px;left:194px;right:18px;margin:0;padding:0 0 0 16px;
+    border-top:0;border-left:1px solid #acc0c340;
+  }
+  .world-sign .sign-expand p{font-size:17px;line-height:1.5;margin-bottom:11px}
+  .world-sign .sign-expand .sign-meta{font-size:13px}
+  .world-sign .sign-expand dl div{font-size:15px;padding:8px 0}
+  .world-sign .sign-expand a{font-size:16px}
+  .world-sign[data-sign-index="1"] .sign-expand p:first-child{display:none}
+  .travel-bar{padding:12px 4.5%;height:43px}
+}
+/* Centre crosshair. With a mouse the page becomes free look: the cursor hides over the
+   scene, the reticle marks where the view aims, and the header / travel bar stay normal UI. */
+.reticle{position:fixed;left:50%;top:50%;z-index:4;width:0;height:0;pointer-events:none;transition:opacity .2s}
+.reticle i,.reticle b{position:absolute;background:#f4e9d6e6;box-shadow:0 0 6px #ffd29659;transition:transform .22s var(--ease),background-color .22s}
+.reticle i:nth-child(1){left:-.75px;top:-15px;width:1.5px;height:8px}
+.reticle i:nth-child(2){left:-.75px;top:7px;width:1.5px;height:8px}
+.reticle i:nth-child(3){top:-.75px;left:-15px;width:8px;height:1.5px}
+.reticle i:nth-child(4){top:-.75px;left:7px;width:8px;height:1.5px}
+.reticle b{left:-1.5px;top:-1.5px;width:3px;height:3px;border-radius:50%}
+.reticle::after{content:"";position:absolute;left:-17px;top:-17px;width:34px;height:34px;border-radius:50%;border:1px solid #e8c496cc;opacity:0;transform:scale(.6);transition:opacity .22s,transform .22s var(--ease)}
+.reticle[data-state="target"] i,.reticle[data-state="link"] i{background:#f0cea0f2}
+.reticle[data-state="target"] i:nth-child(1){transform:translateY(-4px)}
+.reticle[data-state="target"] i:nth-child(2){transform:translateY(4px)}
+.reticle[data-state="target"] i:nth-child(3){transform:translateX(-4px)}
+.reticle[data-state="target"] i:nth-child(4){transform:translateX(4px)}
+.reticle[data-state="target"]::after{opacity:.3;transform:scale(1)}
+/* Resting on an open screen, the reticle recedes so it never hides the text. */
+.reticle[data-state="target"]{opacity:.7}
+.reticle[data-state="link"] i:nth-child(1){transform:translateY(-6px)}
+.reticle[data-state="link"] i:nth-child(2){transform:translateY(6px)}
+.reticle[data-state="link"] i:nth-child(3){transform:translateX(-6px)}
+.reticle[data-state="link"] i:nth-child(4){transform:translateX(6px)}
+.reticle[data-state="link"]::after{opacity:1;transform:scale(1.1);background:#ffd2a01f}
+.reticle[data-state="idle"]{opacity:.25}
+body.aim-mode,body.aim-mode main{cursor:none}
+body.aim-mode .masthead,body.aim-mode .travel-bar{cursor:default}
+body.aim-mode .masthead :is(a,button),body.aim-mode .travel-bar button{cursor:pointer}
+body.aim-mode .world-sign.is-visible{pointer-events:none}
+.world-sign .sign-expand a.is-aimed{color:#fff0d8;text-decoration:underline;text-underline-offset:4px}
+@media(prefers-reduced-motion:reduce){.reticle i,.reticle b,.reticle::after{transition:none}}
+/* Performance: the progress line scales on the compositor (no layout per frame), and the
+   travel bar and each screen keep their layout changes to themselves. */
+.route-line i{width:100%;transform-origin:0 50%;transform:scaleX(0)}
+.travel-bar,.world-sign{contain:layout style}
