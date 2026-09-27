@@ -8,13 +8,12 @@ body{touch-action:pan-y}
 .world-sign{
   left:0;top:0;margin:0;padding:17px 20px;transform-origin:0 0;
   transform-style:flat;backface-visibility:hidden;overflow:hidden;
-  transition:opacity .2s,filter .2s;
+  transition:box-shadow .35s;
   border:1px solid #9caeaf88;border-radius:5px;
   background:linear-gradient(145deg,#151e27f5,#080e16f5);
   box-shadow:inset 0 0 0 3px #050910,0 6px 18px #0008;
   backdrop-filter:none;filter:none;opacity:0;pointer-events:none;
 }
-.world-sign.is-visible,.world-sign[data-sign-index="0"]:not(.is-focused){opacity:var(--distance-alpha,.7)}
 .world-sign.is-visible{pointer-events:auto}
 .world-sign.is-focused{opacity:1;filter:none;border-color:#d6ba96}
 .world-sign::before{inset:4px;opacity:.2;border:1px solid #97b0be33;background:none}
@@ -24,7 +23,7 @@ body{touch-action:pan-y}
 .world-sign .sign-summary{font-size:14px;line-height:1.65;margin:9px 0 0;color:#d4d9db}
 .world-sign .sign-expand,.world-sign.is-focused .sign-expand{
   max-height:none;margin-top:15px;padding-top:14px;border-top:1px solid #acc0c32e;
-  opacity:var(--opening,0);overflow:visible;transition:none;
+  opacity:0;overflow:visible;transition:none;
 }
 .world-sign .sign-expand p{font-size:16px;line-height:1.7;margin:0 0 13px;color:#d9e0e3}
 .world-sign .sign-expand .sign-meta{font:12px/1.7 var(--mono);color:#d2b797}
@@ -34,7 +33,7 @@ body{touch-action:pan-y}
 .world-sign .contact-placeholder strong{font-size:17px}
 .world-sign .sign-action{display:none}
 .world-sign:focus-visible{outline:2px solid #e8cba8;outline-offset:2px}
-.introduction{transition:opacity .15s;pointer-events:none}
+.introduction{transition:none;pointer-events:none}
 .introduction .start-link{pointer-events:auto}
 /* Tall tablets: lift the title into the open sky above the first gantries. */
 @media(min-width:761px) and (orientation:portrait){.introduction{top:14%}}
@@ -98,10 +97,10 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
 /* ---- Effects: arrival, hyperspace, holographic screens, reticle lock-on ----
    Everything animates transform / opacity (compositor work) or runs briefly; all of it is
    switched off under prefers-reduced-motion. */
-.hyperspace{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;will-change:opacity;
+.hyperspace{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;visibility:hidden;will-change:opacity;
   background:radial-gradient(ellipse 72% 64% at 50% 47%,transparent 40%,rgba(72,112,190,.15) 70%,rgba(22,46,104,.44) 100%)}
-.fx-intro .masthead{animation:fx-drop 1s var(--ease) 1.6s both}
-.fx-intro .travel-bar{animation:fx-rise 1s var(--ease) 1.75s both}
+.fx-intro .masthead{animation:fx-drop 1.1s var(--ease) .3s both}
+.fx-intro .travel-bar{animation:fx-rise 1.1s var(--ease) .45s both}
 @keyframes fx-drop{from{opacity:0;transform:translateY(-12px)}}
 @keyframes fx-rise{from{opacity:0;transform:translateY(12px)}}
 /* The title waits for its decode; if scripts never run it still appears after 4 s. */
@@ -114,7 +113,7 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
 .fx-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* Holographic screens: faint scanlines, a CRT power-on when a screen comes within reach,
    corner brackets locking on and a scan sweep when it opens. */
-.sign-fx{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;border-radius:inherit;
+.sign-fx{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;border-radius:4px;
   background:repeating-linear-gradient(180deg,rgba(255,240,220,.03) 0 1px,transparent 1px 3px)}
 .sign-fx::before{content:"";position:absolute;left:0;right:0;top:0;height:24%;opacity:0;transform:translateY(-100%);
   background:linear-gradient(180deg,transparent,rgba(255,214,160,.07) 60%,rgba(255,228,190,.18) 95%,rgba(255,242,222,.42))}
@@ -134,11 +133,19 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
   transition:opacity .2s}
 .world-sign.is-focused::after{opacity:1;animation:fx-lock-on .45s var(--ease)}
 @keyframes fx-lock-on{from{opacity:0;transform:scale(1.035)}}
-.world-sign.is-focused{box-shadow:inset 0 0 0 3px #050910,0 6px 18px #0008,0 0 28px rgba(232,184,122,.2);transition:opacity .2s,filter .2s,box-shadow .35s}
+.world-sign.is-focused{box-shadow:inset 0 0 0 3px #050910,0 6px 18px #0008,0 0 28px rgba(232,184,122,.2)}
 /* Reticle lock-on: a quarter turn while the ticks spread (it ends looking the same), and a
    dashed ring that keeps turning slowly while it rests on a screen. */
 .reticle{transition:opacity .2s,transform .5s var(--ease)}
 .reticle[data-state="target"],.reticle[data-state="link"]{transform:rotate(90deg)}
 .reticle[data-state="target"]::after{border-style:dashed;animation:fx-spin 7s linear infinite}
 @keyframes fx-spin{to{rotate:360deg}}
+/* A screen not yet opened pings its beacon three times as it appears (a signifier, not an
+   instruction); a finite animation leaves no ongoing compositing cost. */
+.world-sign.is-visible.is-unread .beacon{animation:fx-beacon 1.6s ease-in-out 3}
+@keyframes fx-beacon{0%,100%{opacity:.45;transform:scale(.8)}50%{opacity:1;transform:scale(1.3)}}
+/* Touch-friendly hit areas (about 40 px) without changing how the small controls look. */
+.route-stop,.scene-tools button{position:relative}
+.route-stop::after{content:"";position:absolute;inset:-14px}
+.scene-tools button::after{content:"";position:absolute;inset:-12px -6px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.hyperspace{display:none}}

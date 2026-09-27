@@ -103,32 +103,15 @@ void main(){
       this.ready = false;
       this.paints = 0;
       this.last = '';
-      this.gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, powerPreference: 'low-power' });
-      this.mode = this.gl && this.initGL() ? 'webgl' : '2d';
-      if (this.mode === '2d') this.ctx = canvas.getContext('2d');
-      // A lost GPU context (driver reset) falls back to the 2D renderer rather than a black sky.
-      canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); if (this.mode === 'webgl') { this.toFallback(); this.onready?.(); } });
-      this.image = new Image();
-      this.image.onload = () => {
-        if (this.mode === 'webgl') { try { this.upload(); } catch (error) { this.toFallback(); } }
-        this.ready = true; this.last = ''; this.onready?.();
-      };
+      this.gl = null; this.mode = 'pending';
       // Embedded data URI keeps WebGL usable when the page is opened from disk.
-      this.image.src = window.SPACE_PANORAMA || 'assets/space-panorama.jpg';
-      // Every star is drawn crisply per frame; 72 azimuth bins keep the loop to the view.
+      this.src = window.SPACE_PANORAMA || 'assets/space-panorama.jpg';
+      this.image = null;
+      // The first GPU context handshake (~50–150 ms) and the star generation each run as their
+      // own task right after startup, so neither lengthens the script-evaluation task.
       this.bins = Array.from({ length: 72 }, () => []);
-      for (let made = 0, count = window.innerWidth < 761 ? 5000 : 8000; made < count;) {
-        const z = random() * 2 - 1, phi = random() * TAU - Math.PI, theta = Math.asin(z);
-        if (theta < -1) continue;
-        const d = dir(phi, theta), band = Math.exp(-(((d[0] * BAND[0] + d[1] * BAND[1] + d[2] * BAND[2]) / .2) ** 2));
-        const forward = Math.exp(-((phi / .44) ** 2) - ((theta - .1) / .36) ** 2);
-        if (random() > (.28 + .72 * band) * (1 - .5 * forward)) continue;
-        const mag = Math.pow(random(), 4.2), t = random();
-        this.bins[Math.floor((phi + Math.PI) / TAU * 72) % 72].push({ phi, tan: Math.tan(theta), mag: .1 + mag * .9,
-          size: .55 + mag * 1.5, color: t < .25 ? 0 : t < .82 ? 1 : 2, phase: random() * TAU, rate: .6 + random() * 1.4 });
-        made += 1;
-      }
-      for (const bin of this.bins) bin.sort((p, q) => p.color - q.color);
+      setTimeout(() => this.init(), 0);
+      setTimeout(() => this.makeStars(), 0);
       const bodies = [
         { phi: -33, theta: 15, dist: 1400, deg: 7.2, style: { lit: '186,170,148', dark: '17,19,26', bands: 11, rim: '212,198,176' } },
         { phi: -23.5, theta: 25, dist: 1100, deg: 1.05, style: { lit: '150,148,146', dark: '14,16,22', bands: 0, rim: '190,188,184' } },
@@ -143,26 +126,87 @@ void main(){
       rg.addColorStop(0, 'rgba(255,255,255,.9)'); rg.addColorStop(.18, 'rgba(255,255,255,.28)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = rg; g.fillRect(0, 0, 32, 32);
     }
+    init() {
+      const canvas = this.canvas;
+      this.gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, powerPreference: 'low-power' });
+      this.mode = this.gl && this.initGL() ? 'webgl' : '2d';
+      if (this.mode === 'webgl') this.gl.viewport(0, 0, canvas.width, canvas.height);
+      else this.ctx = canvas.getContext('2d');
+      // A lost GPU context (driver reset) falls back to the 2D renderer rather than a black sky.
+      canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); if (this.mode === 'webgl') { this.toFallback(); this.onready?.(); } });
+      this.load();
+    }
+    // Every star is drawn crisply per frame; 72 azimuth bins keep the loop to the view.
+    makeStars() {
+      for (let made = 0, count = window.innerWidth < 761 ? 5000 : 8000; made < count;) {
+        const z = random() * 2 - 1, phi = random() * TAU - Math.PI, theta = Math.asin(z);
+        if (theta < -1) continue;
+        const d = dir(phi, theta), band = Math.exp(-(((d[0] * BAND[0] + d[1] * BAND[1] + d[2] * BAND[2]) / .2) ** 2));
+        const forward = Math.exp(-((phi / .44) ** 2) - ((theta - .1) / .36) ** 2);
+        if (random() > (.28 + .72 * band) * (1 - .5 * forward)) continue;
+        const mag = Math.pow(random(), 4.2), t = random();
+        this.bins[Math.floor((phi + Math.PI) / TAU * 72) % 72].push({ phi, tan: Math.tan(theta), mag: .1 + mag * .9,
+          size: .55 + mag * 1.5, color: t < .25 ? 0 : t < .82 ? 1 : 2, phase: random() * TAU, rate: .6 + random() * 1.4,
+          cp: Math.cos(phi), sp: Math.sin(phi) });
+        made += 1;
+      }
+      for (const bin of this.bins) bin.sort((p, q) => p.color - q.color);
+    }
+    // Shaders compile while the panorama downloads and decodes: nothing queries the program
+    // (which would wait for the compiler) until finishGL(), so startup is not blocked.
     initGL() {
-      const gl = this.gl, sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; };
-      const vs = sh(gl.VERTEX_SHADER, VERT), fs = sh(gl.FRAGMENT_SHADER, FRAG);
-      if (!vs || !fs) return false;
-      const prog = gl.createProgram(); gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog);
+      const gl = this.gl, sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+      const prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+      gl.linkProgram(prog); this.prog = prog;
+      gl.clearColor(.012, .024, .043, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+      return true;
+    }
+    finishGL() {
+      const gl = this.gl, prog = this.prog;
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
       gl.useProgram(prog);
       const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
       const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       this.u = {}; for (const n of ['tex', 'res', 'dpr', 'yaw', 'vanX', 'horizon', 'focal', 'time', 'bright', 'warp', 'foe', 'echo']) this.u[n] = gl.getUniformLocation(prog, n);
-      gl.clearColor(.012, .024, .043, 1); gl.clear(gl.COLOR_BUFFER_BIT);
       return true;
     }
-    upload() {
+    // WebGL path: data URI → Blob → createImageBitmap, which decodes (and scales) off the main
+    // thread, at the width the screen can use: sky pixels per radian × 2π, i.e. 2048 on phones
+    // and 4096 on larger screens. No <img> is made unless the 2D fallback needs one.
+    async load() {
+      if (this.mode === 'webgl' && window.createImageBitmap && window.fetch) {
+        try {
+          const blob = await (await fetch(this.src)).blob();
+          const width = Math.min(this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE), (this.pxPerRad || 700) * TAU > 2600 ? 4096 : 2048);
+          const bitmap = await createImageBitmap(blob, width < 4096 ? { resizeWidth: width, resizeHeight: width / 2, resizeQuality: 'high' } : undefined);
+          if (this.mode === 'webgl') {
+            if (!this.finishGL()) throw new Error('shader');
+            this.upload(bitmap); this.textureWidth = bitmap.width;
+            bitmap.close(); this.ready = true; this.last = ''; this.onready?.();
+            return;
+          }
+          bitmap.close();
+        } catch (error) { if (this.mode === 'webgl') this.toFallback(); }
+      }
+      this.loadImage();
+    }
+    // <img> path: the 2D fallback, or WebGL where createImageBitmap is missing.
+    loadImage() {
+      if (this.image) return;
+      this.ready = false;
+      this.image = new Image();
+      this.image.onload = () => {
+        if (this.mode === 'webgl') { try { if (!this.finishGL()) throw new Error('shader'); this.upload(this.image); } catch (error) { this.toFallback(); } }
+        this.ready = true; this.last = ''; this.onready?.();
+      };
+      this.image.src = this.src;
+    }
+    upload(source) {
       const gl = this.gl, tex = gl.createTexture(), max = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-      let source = this.image;
-      if (source.naturalWidth > max) {
-        source = document.createElement('canvas'); source.width = max; source.height = max / 2;
-        source.getContext('2d').drawImage(this.image, 0, 0, max, max / 2);
+      if ((source.naturalWidth || source.width) > max) {
+        const cv = document.createElement('canvas'); cv.width = max; cv.height = max / 2;
+        cv.getContext('2d').drawImage(source, 0, 0, max, max / 2); source = cv;
       }
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, source);
@@ -179,6 +223,7 @@ void main(){
       cv.id = old.id; cv.className = old.className; cv.width = old.width; cv.height = old.height;
       old.replaceWith(cv);
       this.canvas = cv; this.gl = null; this.mode = '2d'; this.ctx = cv.getContext('2d'); this.last = '';
+      this.loadImage();
     }
     resize(w, h, dpr) {
       this.canvas.width = Math.round(w * dpr); this.canvas.height = Math.round(h * dpr);
@@ -245,13 +290,14 @@ void main(){
       const last = Math.floor((s.yaw + limit + Math.PI) / TAU * 72), bright = [];
       const warp = s.warp, streak = warp > .03, tailK = 1 - .3 * warp * s.warpDir, fx = s.foeX, fy = s.horizon;
       const paths = streak ? STAR_COLORS.map(() => new Path2D()) : null, faint = streak ? clamp(1 - warp / .35, 0, 1) : 1;
+      // cos / sin of (phi − yaw) from each star's stored cos / sin of phi: no trigonometry per star.
+      const cy = Math.cos(s.yaw), sy = Math.sin(s.yaw), cosLimit = Math.cos(limit);
       c.globalCompositeOperation = 'lighter';
       for (let b = first; b <= last; b++) {
         let color = -1;
         for (const st of this.bins[((b % 72) + 72) % 72]) {
-          let a = st.phi - s.yaw; if (a > Math.PI) a -= TAU; else if (a < -Math.PI) a += TAU;
-          if (Math.abs(a) > limit) continue;
-          const x = s.vanX + s.focal * Math.tan(a), y = s.horizon - s.focal * st.tan / Math.cos(a);
+          const ca = st.cp * cy + st.sp * sy; if (ca < cosLimit) continue;
+          const x = s.vanX + s.focal * (st.sp * cy - st.cp * sy) / ca, y = s.horizon - s.focal * st.tan / ca;
           if (y < -6 || y > s.h + 6) continue;
           if (streak && st.mag > .22) { const path = paths[st.color]; path.moveTo(x, y); path.lineTo(fx + (x - fx) * tailK, fy + (y - fy) * tailK); }
           else if (faint <= 0) continue;

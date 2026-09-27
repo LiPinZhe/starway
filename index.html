@@ -4,8 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#05070b">
+  <meta name="color-scheme" content="dark">
   <meta name="description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
   <title>探索之路 · 个人简历</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305070b'/%3E%3Cpath d='M8 28 15 8h2l7 20' fill='none' stroke='%23e9b47c' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='10' r='2.4' fill='%23ffe1b7'/%3E%3C/svg%3E">
+  <link rel="canonical" href="https://lipinzhe.github.io/starway/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="探索之路 · 个人简历">
+  <meta property="og:description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
+  <meta property="og:url" content="https://lipinzhe.github.io/starway/">
+  <meta property="og:image" content="https://lipinzhe.github.io/starway/previews/social-card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="assets/route.css">
   <link rel="stylesheet" href="assets/monitors.css">
   <!-- Arrival sequence: hides the title and bars until the intro reveals them (never under reduced motion). -->
@@ -26,7 +37,7 @@
       <span><strong>你的姓名</strong><small>COMPUTER VISION</small></span>
     </a>
     <nav class="navigation" aria-label="控制">
-      <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="自动前进"><span aria-hidden="true">▶</span><b>AUTO</b></button>
+      <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="AUTO 自动前进"><span aria-hidden="true">▶</span><b>AUTO</b></button>
     </nav>
   </header>
 
@@ -62,10 +73,10 @@
   <footer class="travel-bar">
     <nav class="route-map" aria-label="旅程进度">
       <div class="route-line" aria-hidden="true"><i id="progressFill"></i></div>
-      <button type="button" data-go="0" class="route-stop is-current" aria-current="step" aria-label="第一段"></button>
-      <button type="button" data-go="1" class="route-stop" aria-label="第二段"></button>
-      <button type="button" data-go="2" class="route-stop" aria-label="第三段"></button>
-      <button type="button" data-go="3" class="route-stop" aria-label="第四段"></button>
+      <button type="button" data-go="0" class="route-stop is-current" aria-current="step" aria-label="前往：关于我" title="关于我"></button>
+      <button type="button" data-go="1" class="route-stop" aria-label="前往：CornPheno 研究" title="CornPheno 研究"></button>
+      <button type="button" data-go="2" class="route-stop" aria-label="前往：下一段探索" title="下一段探索"></button>
+      <button type="button" data-go="3" class="route-stop" aria-label="前往：联系方式" title="联系方式"></button>
     </nav>
     <div class="scene-tools"><button id="sceneryButton" type="button" aria-pressed="false" aria-label="隐藏路牌">◌</button><button id="motionButton" type="button" aria-pressed="false" aria-label="暂停动态">Ⅱ</button><span id="progressText">0%</span></div>
   </footer>

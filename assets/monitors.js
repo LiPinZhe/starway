@@ -24,12 +24,15 @@
         details.inert = true;
         // Holographic layer: static scanlines, the power-on flash and the opening scan sweep.
         const fx = document.createElement('i'); fx.className = 'sign-fx'; fx.setAttribute('aria-hidden', 'true'); element.append(fx);
+        element.classList.add('is-unread'); // its beacon breathes until the screen has been opened once
         return { element, details, anchor, station, side, index: i, opening: 0, near: false,
           title: element.querySelector('h2'), label: element.querySelector('.sign-head span'),
           rotation: -side * 1.02, width: 292, height: 151, closedHeight: 151, openHeight: 151,
           visible: false, matrix: [], dom: {} };
       });
-      this.measure();
+      // Measuring forces a layout: it runs as its own task after startup (or on first use).
+      this.measured = false;
+      setTimeout(() => { if (!this.measured) this.measure(); }, 0);
     }
     widths() {
       const narrow = this.scene.mobile, short = this.scene.shortView;
@@ -38,6 +41,7 @@
     // Screen heights follow the rendered text, since fonts differ between devices.
     // Runs synchronously inside layout, so no intermediate size is ever painted.
     measure() {
+      this.measured = true;
       const { closed, open } = this.widths();
       for (const item of this.items) {
         const el = item.element, summary = el.querySelector('.sign-summary'), cs = getComputedStyle(el);
@@ -103,6 +107,7 @@
       this.aim = link ? 'link' : this.focused >= 0 || this.candidate >= 0 ? 'target' : 'none';
     }
     update(dt, instant = false) {
+      if (!this.measured) this.measure();
       this.choose(dt);
       const ease = instant ? 1 : 1 - Math.exp(-dt / 170);
       const { closed, open } = this.widths(), short = this.scene.shortView;
@@ -117,6 +122,11 @@
         item.unit = short ? .035 + .038 * item.opening : this.scene.mobile ? .058 : .035;
         this.place(item, focused);
       }
+      // Stacking follows depth order and only changes when two screens swap places.
+      this.items.filter(item => item.visible).sort((a, b) => b.depth - a.depth).forEach((item, rank) => {
+        const z = String(480 + rank);
+        if (item.dom.z !== z) item.element.style.zIndex = item.dom.z = z;
+      });
       this.aimLinks();
     }
     // Each value is written only when it differs from the last one written, so a
@@ -135,6 +145,7 @@
         el.classList.toggle('is-focused', focused && shown);
         // Coming within reach powers the screen on (CRT flash); opening it decodes its title.
         el.classList.toggle('is-near', near); item.near = near;
+        if (focused && shown) el.classList.remove('is-unread');
         if (focused && shown && !item.decoded) { item.decoded = true; window.RoadFx?.decode(item.label, { stagger: .03, span: .3 }); window.RoadFx?.decode(item.title, { delay: .08, stagger: .06, span: .34 }); }
         if (!focused) item.decoded = false;
         el.setAttribute('aria-expanded', String(focused));
@@ -151,11 +162,14 @@
       if (dom.height !== height) st.height = dom.height = height;
       const transform = `matrix3d(${item.matrix.map(n => n.toFixed(8)).join(',')})`;
       if (dom.transform !== transform) st.transform = dom.transform = transform;
-      const z = String(500 - Math.round(p.depth));
-      if (dom.z !== z) st.zIndex = dom.z = z;
-      const opening = item.opening.toFixed(2), alpha = clamp(1.25 - p.depth / 190, .26, 1).toFixed(2);
-      if (dom.opening !== opening) st.setProperty('--opening', dom.opening = opening);
-      if (dom.alpha !== alpha) st.setProperty('--distance-alpha', dom.alpha = alpha);
+      item.depth = p.depth;
+      // Opacity goes on the element itself: a custom property here would restyle the whole
+      // screen subtree every frame, and a CSS transition would restart every frame. Screens
+      // fade out before the far limit and brighten as they open.
+      const alpha = clamp(1.25 - p.depth / 190, .26, 1) * clamp((180 - p.depth) / 25, 0, 1);
+      const opacity = (alpha + (1 - alpha) * item.opening).toFixed(2), opening = item.opening.toFixed(2);
+      if (dom.opacity !== opacity) st.opacity = dom.opacity = opacity;
+      if (dom.opening !== opening) item.details.style.opacity = dom.opening = opening;
     }
     drawStands() {
       if (this.hidden) return;

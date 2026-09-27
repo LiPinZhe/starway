@@ -23,24 +23,23 @@
   let boot = reduced ? BOOT_END : 0, bootRate = 1, titled = reduced;
   scene.boot = boot;
   if (!reduced && window.RoadFx) {
-    RoadFx.prepare(document.querySelector('#intro .eyebrow'), { delay: 0, stagger: .028, span: .3 });
-    RoadFx.prepare(document.querySelector('#intro h1'), { delay: .25, stagger: .11, span: .42 });
-    RoadFx.prepare(document.querySelector('#intro .intro-copy'), { delay: .75, stagger: .022, span: .26 });
+    RoadFx.prepare(document.querySelector('#intro .eyebrow'), { delay: 0, stagger: .024, span: .28 });
+    RoadFx.prepare(document.querySelector('#intro h1'), { delay: .12, stagger: .09, span: .38 });
+    RoadFx.prepare(document.querySelector('#intro .intro-copy'), { delay: .55, stagger: .02, span: .24 });
   } else root.classList.remove('fx-intro');
   function skipIntro() { if (boot < BOOT_END) { bootRate = 7; titled = true; window.RoadFx?.hurry(); } }
 
+  // Toggle buttons keep one accessible name and report their state through aria-pressed
+  // (WAI-ARIA); the AUTO button's name includes its visible text (WCAG 2.5.3).
   function controls() {
     $('autoButton').setAttribute('aria-pressed', String(auto));
-    $('autoButton').setAttribute('aria-label', auto ? '停止自动前进' : '自动前进');
     $('autoButton').classList.toggle('is-running', auto);
     $('motionButton').setAttribute('aria-pressed', String(paused));
-    $('motionButton').setAttribute('aria-label', paused ? '继续动态' : '暂停动态');
     $('motionButton').textContent = paused ? '▶' : 'Ⅱ';
     $('sceneryButton').setAttribute('aria-pressed', String(scenery));
-    $('sceneryButton').setAttribute('aria-label', scenery ? '显示路牌' : '隐藏路牌');
   }
   // Last values written to the DOM, so a frame only touches what actually changed.
-  const shown = { fill: '', text: '', current: -1, intro: -1, hyper: '' };
+  const shown = { fill: '', text: '', current: -1, intro: -1, hyper: '', hyperVis: 'hidden' };
   function ui() {
     const fill = `scaleX(${target.toFixed(3)})`, text = `${Math.round(target * 100)}%`, current = Math.round(target * 3);
     if (fill !== shown.fill) $('progressFill').style.transform = shown.fill = fill;
@@ -60,7 +59,11 @@
     }
     // Hyperspace tints the screen edges; the overlay's opacity is a compositor-only change.
     const hyper = (scene.warp * .85).toFixed(2);
-    if (hyper !== shown.hyper) hyperspace.style.opacity = shown.hyper = hyper;
+    if (hyper !== shown.hyper) {
+      const vis = hyper === '0.00' ? 'hidden' : 'visible';
+      if (vis !== shown.hyperVis) hyperspace.style.visibility = shown.hyperVis = vis;
+      hyperspace.style.opacity = shown.hyper = hyper;
+    }
     const state = overControls ? 'idle' : monitors.aim;
     if (state !== reticleState) { reticle.dataset.state = reticleState = state; }
   }
@@ -71,7 +74,8 @@
   // a GPU running flat out and missing refreshes unevenly.
   // With no input for a while, only ambient light moves, drawn every ~18 ms (55 fps on
   // 165 Hz, unchanged on 60 Hz) so the GPU can cool between interactions.
-  const PACE_MIN = 11.5, PACE_MAX = 20.5, IDLE_MS = 18, ticks = [];
+  // After 30 s without input the ambient animation runs at ~30 fps (battery), until any input.
+  const PACE_MIN = 11.5, PACE_MAX = 20.5, IDLE_MS = 18, DEEP_IDLE_MS = 33, ticks = [];
   let refresh = 0, pace = 1, lastTick = 0, tickCount = 0, paceAt = 0, lateAvg = 1, inputAt = 0;
   // Callbacks arrive once per display refresh; a low percentile of their spacing is the
   // refresh interval even while some frames run long. Re-checked every 60 callbacks.
@@ -87,7 +91,7 @@
     lastTick = now;
     if (ticks.length >= 24 && (!refresh || ++tickCount % 60 === 0)) estimateRefresh();
     const calm = !auto && now - inputAt > 2500 && Math.abs(camera - target) < .00001 && look === lookTarget && pitch === pitchTarget;
-    const step = refresh ? (calm ? Math.max(pace, Math.round(IDLE_MS / refresh)) : pace) : 1;
+    const step = refresh ? (calm ? Math.max(pace, Math.round((now - inputAt > 30000 ? DEEP_IDLE_MS : IDLE_MS) / refresh)) : pace) : 1;
     if (refresh && last && now - last < refresh * (step - .5)) { raf = requestAnimationFrame(frame); return; }
     const begin = performance.now();
     const interval = last ? now - last : 16, dt = Math.min(45, interval); last = now;
@@ -119,7 +123,7 @@
     // The boot clock waits for the sky (at most 1.5 s), so the arrival never plays over a black sky.
     if (boot < BOOT_END && (scene.skyReady || now > 1500)) {
       boot = Math.min(BOOT_END, boot + dt / 1000 * bootRate);
-      if (!titled && boot > .7) { titled = true; window.RoadFx?.play(); }
+      if (!titled && boot > .35) { titled = true; window.RoadFx?.play(); }
       if (boot >= BOOT_END) root.classList.remove('fx-intro');
     }
     const hold = window.__hold; // capture aid only: { boot, time } pins the effect clocks
@@ -239,6 +243,7 @@
       aim(lookTarget + (event.key === 'ArrowRight' ? .12 : -.12));
     }
     if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); go(event.key === 'Home' ? 0 : 3); }
+    if (event.key === 'Escape' && monitors.keyboard >= 0) { monitors.keyboard = -1; document.activeElement?.blur?.(); aim(0, 0); }
     if (event.code === 'Space' && !event.target.closest('button,a')) { event.preventDefault(); toggleAuto(); }
   });
   window.addEventListener('resize', () => {

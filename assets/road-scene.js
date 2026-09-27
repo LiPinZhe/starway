@@ -56,6 +56,7 @@
       this.sky.onready = () => { window.__roadSkyReady = true; this.onready?.(); };
       this.routeLength = 180;
       this.lookYaw = 0; this.lookPitch = 0; this.pitch = 0; this.yaw = 0;
+      this.stepCenter = new Float64Array(STEPS.length);
       this.camera = 0; this.cameraX = this.center(0);
       this.velocity = 0; this.lastCamera = 0; this.lastClock = 0;
       this.frameAvg = 16.7; this.lastAdapt = 0; this.probe = null; this.locked = false;
@@ -78,7 +79,12 @@
         const n = [-r.x, 150, -r.z * .35], l = Math.hypot(...n), nn = n.map(v => v / l);
         const e1 = [nn[2], 0, -nn[0]].map(v => v / Math.hypot(nn[2], nn[0]));
         const e2 = [nn[1] * e1[2] - nn[2] * e1[1], nn[2] * e1[0] - nn[0] * e1[2], nn[0] * e1[1] - nn[1] * e1[0]];
-        return { ...r, e1, e2 };
+        const band = r.r * .035;
+        const pts = [r.r + band, r.r - band, r.r].map(k => Array.from({ length: 65 }, (_, i) => {
+          const a = i / 64 * TAU, ca = Math.cos(a) * k, sa = Math.sin(a) * k;
+          return [r.x + e1[0] * ca + e2[0] * sa, r.y + e1[1] * ca + e2[1] * sa, r.z + e1[2] * ca + e2[2] * sa];
+        }));
+        return { ...r, e1, e2, pts };
       });
       this.resize();
     }
@@ -90,6 +96,7 @@
       this.applyScale();
       this.shortView = this.w > this.h && this.h < 550;
       this.baseFocal = this.focal = Math.min(this.w * 1.1, this.h * .94);
+      this.sky.pxPerRad = Math.min(this.dpr, 1) * .85 * this.baseFocal; // sizes the panorama texture
       this.baseHorizon = this.h * (this.shortView ? .75 : this.mobile ? .51 : .47);
       this.vanX = this.w * .5;
       this.aimX = this.w / 2; this.aimY = this.h / 2;
@@ -121,7 +128,12 @@
     get skyPaints() { return this.sky.paints; }
     get skyReady() { return this.sky.ready; }
     get skyLayout() { return this.sky.mode; }
-    center(z) { return Math.sin(z * .013) * 2.6 + Math.sin(z * .033) * .6; }
+    // Road centre line. Consecutive calls often repeat one depth (every point of a gate outline,
+    // both ends of a seam), so the last value is kept; along() reads a per-frame table instead.
+    center(z) {
+      if (z !== this.lastZ) { this.lastZ = z; this.lastC = Math.sin(z * .013) * 2.6 + Math.sin(z * .033) * .6; }
+      return this.lastC;
+    }
     setCamera(progress) {
       this.camera = progress * this.routeLength;
       this.cameraX = this.center(this.camera);
@@ -130,6 +142,7 @@
       this.pitch = this.lookPitch;
       this.cosYaw = Math.cos(this.yaw); this.sinYaw = Math.sin(this.yaw);
       this.horizon = this.baseHorizon + this.focal * Math.tan(this.pitch);
+      for (let i = 0; i < STEPS.length; i++) this.stepCenter[i] = this.center(this.camera + STEPS[i]);
     }
     toCamera(worldX, worldZ) {
       const dx = worldX - this.cameraX, dz = worldZ - this.camera;
@@ -146,8 +159,11 @@
     project(x, elevation, depth) { const worldZ = this.camera + depth; return this.projectWorld(x + this.center(worldZ), elevation, worldZ); }
     // Samples along the road; while the road powers on, nothing beyond the lit reach exists yet.
     along(x, elevation, from = -30, to = 246) {
-      const pts = [], end = Math.min(to, this.reach);
-      for (const d of STEPS) { if (d > end) break; if (d >= from) pts.push(this.rp(x, elevation, d)); }
+      const pts = [], end = Math.min(to, this.reach), cs = this.stepCenter;
+      for (let i = 0; i < STEPS.length; i++) {
+        const d = STEPS[i]; if (d > end) break;
+        if (d >= from) pts.push(this.cam(x + cs[i], elevation, this.camera + d));
+      }
       if (end < to && end > from) pts.push(this.rp(x, elevation, end));
       return pts;
     }
@@ -207,12 +223,14 @@
     sprite(img, p, radius, alpha) {
       if (p.z < NEAR || alpha < .005) return;
       const s = this.screen(p);
+      if (s.x + radius < 0 || s.x - radius > this.w || s.y + radius < 0 || s.y - radius > this.h) return;
       this.ctx.globalAlpha = alpha; this.ctx.drawImage(img, s.x - radius, s.y - radius, radius * 2, radius * 2);
     }
     // Soft light pool lying on the deck: a sprite squashed to the ground's perspective.
     pool(x, d, rx, rz, rgb, alpha) {
       const p = this.rp(x, 0, d); if (p.z < NEAR + 1 || alpha < .005) return;
       const s = this.screen(p), sx = rx * s.scale, sy = Math.max(1, 3.6 * this.focal * rz / (p.z * p.z));
+      if (s.x + sx < 0 || s.x - sx > this.w || s.y + sy < 0 || s.y - sy > this.h) return;
       this.ctx.globalAlpha = alpha; this.ctx.drawImage(glow(rgb), s.x - sx, s.y - sy, sx * 2, sy * 2);
     }
     drawMonitorStand(anchor, focused, side = 1) {
@@ -267,15 +285,7 @@
       for (const r of this.rings) {
         const mid = this.cam(r.x, r.y, r.z); if (mid.z < 20) continue;
         // The ring's body is an annulus in its own plane: two circles, filled even-odd.
-        const circle = k => {
-          const pts = [];
-          for (let i = 0; i <= 64; i++) {
-            const a = i / 64 * TAU, ca = Math.cos(a) * k, sa = Math.sin(a) * k;
-            pts.push(this.cam(r.x + r.e1[0] * ca + r.e2[0] * sa, r.y + r.e1[1] * ca + r.e2[1] * sa, r.z + r.e1[2] * ca + r.e2[2] * sa));
-          }
-          return pts;
-        };
-        const band = r.r * .035, outer = circle(r.r + band), inner = circle(r.r - band), pts = circle(r.r);
+        const [outer, inner, pts] = r.pts.map(ring => ring.map(([x, y, z]) => this.cam(x, y, z)));
         // Filled only when wholly in front of the camera (the hairline below clips itself).
         c.globalAlpha = far;
         if (outer.every(p => p.z > NEAR)) {
@@ -522,9 +532,10 @@
       c.globalCompositeOperation = 'lighter';
       let hot = -1;
       for (let i = 0; i < this.points.length; i += step) {
-        const p = this.points[i], d = base + mod(p.z - base, 262) - this.camera;
+        const p = this.points[i], z = base + mod(p.z - base, 262), d = z - this.camera;
         if (d > 190 || d > this.reach) continue; // sub-pixel and faint by here; the horizon glow carries the far end
-        const q = this.rp(p.x, .018, d); if (q.z < 1) continue;
+        if (p.cz !== z) { p.cz = z; p.cx = this.center(z); }
+        const q = this.cam(p.x + p.cx, .018, z); if (q.z < 1) continue;
         const pos = this.screen(q); if (pos.y > this.h + 5 || pos.x < -5 || pos.x > this.w + 5) continue;
         const a = (.18 + p.light * .46) * clamp(1 - d / 260, 0, 1), size = clamp(p.r * pos.scale, .25, 2.1);
         const warm = p.light > .84 ? 1 : 0;
@@ -545,9 +556,10 @@
       c.globalCompositeOperation = 'lighter';
       let cool = -1;
       for (let i = 0; i < this.dust.length; i += step) {
-        const m = this.dust[i], d = base + mod(m.z - base, 200) - this.camera, y = m.y + Math.sin(time * .3 + m.drift) * .5;
+        const m = this.dust[i], z = base + mod(m.z - base, 200), d = z - this.camera, y = m.y + Math.sin(time * .3 + m.drift) * .5;
         if (d > this.reach) continue;
-        const p = this.rp(m.x, y, d); if (p.z < 1.2) continue;
+        if (m.cz !== z) { m.cz = z; m.cx = this.center(z); }
+        const p = this.cam(m.x + m.cx, y, z); if (p.z < 1.2) continue;
         const s = this.screen(p); if (s.x < -20 || s.x > this.w + 20 || s.y < -20 || s.y > this.h + 20) continue;
         const warm = m.r > .8 ? 1 : 0;
         if (moving) {
