@@ -8,6 +8,8 @@
   <title>探索之路 · 个人简历</title>
   <link rel="stylesheet" href="assets/route.css">
   <link rel="stylesheet" href="assets/monitors.css">
+  <!-- Arrival sequence: hides the title and bars until the intro reveals them (never under reduced motion). -->
+  <script>if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("fx-intro");</script>
 </head>
 <body>
   <!-- Confirmed: scroll controls travel; the mouse (or a touch drag) turns the camera
@@ -15,7 +17,7 @@
        place when aimed at. The sky is a panorama that turns with the view and road.
        Auto travel is optional. Identity, affiliation, email and CV remain unfilled. -->
   <a class="skip-link" href="#journey">跳到道路</a>
-  <div class="universe" aria-hidden="true"><canvas id="skyCanvas"></canvas><canvas id="roadCanvas"></canvas><div class="vignette"></div></div>
+  <div class="universe" aria-hidden="true"><canvas id="skyCanvas"></canvas><canvas id="roadCanvas"></canvas><div class="vignette"></div><div class="hyperspace" id="hyperspace"></div></div>
   <div class="reticle" id="reticle" aria-hidden="true" data-state="none"><i></i><i></i><i></i><i></i><b></b></div>
 
   <header class="masthead">
@@ -71,6 +73,7 @@
   <script src="assets/space-panorama-data.js"></script>
   <script src="assets/sky-panorama.js"></script>
   <script src="assets/road-scene.js"></script>
+  <script src="assets/effects.js"></script>
   <script src="assets/monitors.js"></script>
   <script src="assets/journey.js"></script>
 </body>

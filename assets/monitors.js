@@ -22,7 +22,10 @@
         element.querySelector('.sign-action')?.remove();
         const details = element.querySelector('.sign-expand');
         details.inert = true;
-        return { element, details, anchor, station, side, index: i, opening: 0,
+        // Holographic layer: static scanlines, the power-on flash and the opening scan sweep.
+        const fx = document.createElement('i'); fx.className = 'sign-fx'; fx.setAttribute('aria-hidden', 'true'); element.append(fx);
+        return { element, details, anchor, station, side, index: i, opening: 0, near: false,
+          title: element.querySelector('h2'), label: element.querySelector('.sign-head span'),
           rotation: -side * 1.02, width: 292, height: 151, closedHeight: 151, openHeight: 151,
           visible: false, matrix: [], dom: {} };
       });
@@ -122,13 +125,18 @@
       const s = this.scene, p = s.projectWorld(item.anchor.x, item.anchor.height, item.anchor.z);
       const el = item.element, st = el.style, dom = item.dom;
       const radius = item.width * item.unit * p.scale;
-      const shown = p.depth > 7 && p.depth < 180 && p.x + radius > 0 && p.x - radius < s.w;
-      const live = shown && !this.hidden, state = `${live}|${focused}|${shown}`;
+      // Screens exist only once the arrival's power front has passed them.
+      const shown = p.depth > 7 && p.depth < 180 && item.anchor.z - s.camera < s.reach && p.x + radius > 0 && p.x - radius < s.w;
+      const live = shown && !this.hidden, near = live && p.depth < (item.near ? 105 : 95), state = `${live}|${focused}|${shown}|${near}`;
       item.visible = shown;
       if (dom.state !== state) {
         dom.state = state;
         el.classList.toggle('is-visible', live);
         el.classList.toggle('is-focused', focused && shown);
+        // Coming within reach powers the screen on (CRT flash); opening it decodes its title.
+        el.classList.toggle('is-near', near); item.near = near;
+        if (focused && shown && !item.decoded) { item.decoded = true; window.RoadFx?.decode(item.label, { stagger: .03, span: .3 }); window.RoadFx?.decode(item.title, { delay: .08, stagger: .06, span: .34 }); }
+        if (!focused) item.decoded = false;
         el.setAttribute('aria-expanded', String(focused));
         el.setAttribute('aria-hidden', String(!live));
         el.inert = !live;

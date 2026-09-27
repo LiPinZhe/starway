@@ -12,6 +12,9 @@
   'use strict';
   const TAU = Math.PI * 2, NEAR = .8, NO_SKIP = new Set(), BUDGET = 2.2e6;
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const smooth = (a, b, n) => { const t = clamp((n - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  // Arrival timeline (seconds): out of hyperspace, then a power front lights the road from near to far.
+  const BOOT_END = 2.4;
   const mod = (n, d) => ((n % d) + d) % d;
   const toNear = (a, b) => { const t = (NEAR - a.z) / (b.z - a.z); return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: NEAR }; };
   let seed = 290927;
@@ -56,6 +59,9 @@
       this.camera = 0; this.cameraX = this.center(0);
       this.velocity = 0; this.lastCamera = 0; this.lastClock = 0;
       this.frameAvg = 16.7; this.lastAdapt = 0; this.probe = null; this.locked = false;
+      // Effects state: boot clock (journey.js advances it), hyperspace factor, lit reach of the road.
+      this.boot = BOOT_END; this.bootEnd = BOOT_END; this.calm = false;
+      this.warp = 0; this.speedWarp = 0; this.warpDir = 1; this.reach = 250; this.skyBright = 1; this.far = 1; this.foeX = 0;
       // Sorted by colour so each run shares one fill style.
       this.points = Array.from({ length: 1650 }, () => ({ x: (random() * 2 - 1) * 8.1, z: random() * 262, r: .012 + random() * .028, light: random() }))
         .sort((a, b) => (a.light > .84) - (b.light > .84));
@@ -83,7 +89,7 @@
       this.budget = BUDGET; this.probe = null; this.locked = false;
       this.applyScale();
       this.shortView = this.w > this.h && this.h < 550;
-      this.focal = Math.min(this.w * 1.1, this.h * .94);
+      this.baseFocal = this.focal = Math.min(this.w * 1.1, this.h * .94);
       this.baseHorizon = this.h * (this.shortView ? .75 : this.mobile ? .51 : .47);
       this.vanX = this.w * .5;
       this.aimX = this.w / 2; this.aimY = this.h / 2;
@@ -138,10 +144,27 @@
       return { x: this.vanX + p.x * scale, y: this.horizon + (3.6 - elevation) * scale, scale, depth: p.z };
     }
     project(x, elevation, depth) { const worldZ = this.camera + depth; return this.projectWorld(x + this.center(worldZ), elevation, worldZ); }
+    // Samples along the road; while the road powers on, nothing beyond the lit reach exists yet.
     along(x, elevation, from = -30, to = 246) {
-      const pts = [];
-      for (const d of STEPS) if (d >= from && d <= to) pts.push(this.rp(x, elevation, d));
+      const pts = [], end = Math.min(to, this.reach);
+      for (const d of STEPS) { if (d > end) break; if (d >= from) pts.push(this.rp(x, elevation, d)); }
+      if (end < to && end > from) pts.push(this.rp(x, elevation, end));
       return pts;
+    }
+    // Boot timeline and hyperspace. Fast travel (a flick of the wheel, a jump between stops)
+    // widens the view by up to 13% and streaks the stars; it eases back once travel slows.
+    effects(dt) {
+      const b = this.boot;
+      this.skyBright = smooth(0, .8, b);
+      this.far = smooth(1.2, 2.3, b);
+      this.reach = b >= BOOT_END ? 250 : -30 + 280 * clamp((b - .45) / 1.55, 0, 1) ** 1.6;
+      const arrive = (1 - clamp(b / 1.35, 0, 1)) ** 2, want = this.calm ? 0 : smooth(26, 95, Math.abs(this.velocity));
+      this.speedWarp += (want - this.speedWarp) * clamp(dt * (want > this.speedWarp ? 8 : 3.3), 0, 1);
+      if (this.speedWarp < .01 && want === 0) this.speedWarp = 0;
+      this.warp = this.calm ? 0 : Math.max(arrive, this.speedWarp);
+      this.warpDir = arrive >= this.speedWarp ? 1 : Math.sign(this.velocity) || 1;
+      if (window.__hold?.warp != null) { this.warp = window.__hold.warp; this.warpDir = 1; } // capture aid only
+      this.focal = this.baseFocal * (1 - .13 * this.warp * (2 - this.warp));
     }
     // Polyline through camera-space points, clipped at the near plane (adds to the current path).
     trace(pts) {
@@ -194,7 +217,7 @@
     }
     drawMonitorStand(anchor, focused, side = 1) {
       const c = this.ctx, foot = this.cam(anchor.x, 0, anchor.z), hinge = this.cam(anchor.x, anchor.height, anchor.z);
-      if (foot.z < 2 || foot.z > 190) return;
+      if (foot.z < 2 || foot.z > 190 || anchor.z - this.camera > this.reach) return;
       const alpha = clamp(1.15 - foot.z / 230, .12, .95);
       // A small bay bolted to the road edge carries each display.
       const bay = [[-4.8, -2.3], [1.8, -2.3], [2.8, -1.3], [2.8, 1.3], [1.8, 2.3], [-4.8, 2.3]]
@@ -215,12 +238,16 @@
     render(progress, time) {
       window.__roadRenderCount = (window.__roadRenderCount || 0) + 1;
       const c = this.ctx, { w, h } = this;
-      this.setCamera(progress);
       const skip = window.__skipLayers || NO_SKIP; // profiling aid only
-      const clock = performance.now() / 1000, dt = this.lastClock ? clamp(clock - this.lastClock, 0, .1) : 0;
-      if (dt > 0) this.velocity += ((this.camera - this.lastCamera) / dt - this.velocity) * clamp(dt * 8, 0, 1);
-      this.lastClock = clock; this.lastCamera = this.camera;
-      if (!skip.has('sky')) this.sky.render({ w, h, yaw: this.yaw, vanX: this.vanX, horizon: this.horizon, focal: this.focal });
+      const clock = performance.now() / 1000, dt = this.lastClock ? clamp(clock - this.lastClock, 0, .1) : 0, at = progress * this.routeLength;
+      if (dt > 0) this.velocity += ((at - this.lastCamera) / dt - this.velocity) * clamp(dt * 8, 0, 1);
+      this.lastClock = clock; this.lastCamera = at;
+      this.effects(dt);
+      this.setCamera(progress);
+      // Focus of expansion: where the road heading sits on screen; hyperspace rays leave from here.
+      this.foeX = this.vanX - this.focal * Math.tan(this.lookYaw);
+      if (!skip.has('sky')) this.sky.render({ w, h, yaw: this.yaw, vanX: this.vanX, horizon: this.horizon, focal: this.focal,
+        time, bright: this.skyBright, warp: this.warp * this.warpDir, foe: this.foeX });
       c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
       c.clearRect(0, 0, w, h);
       if (!skip.has('bodies')) this.sky.drawBodies(c, this, time);
@@ -228,6 +255,7 @@
       if (!skip.has('pylons')) this.drawPylons(time);
       if (!skip.has('deck')) this.drawDeck(time);
       if (!skip.has('rails')) this.drawRails(time);
+      if (this.reach < 246) this.drawFront();
       if (!skip.has('gates')) this.drawGates(time);
       if (!skip.has('particles')) this.drawParticles();
       if (!skip.has('dust')) this.drawDust(time);
@@ -235,7 +263,7 @@
       c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
     }
     drawRings(time) {
-      const c = this.ctx;
+      const c = this.ctx, far = this.far; if (far <= 0) return;
       for (const r of this.rings) {
         const mid = this.cam(r.x, r.y, r.z); if (mid.z < 20) continue;
         // The ring's body is an annulus in its own plane: two circles, filled even-odd.
@@ -249,6 +277,7 @@
         };
         const band = r.r * .035, outer = circle(r.r + band), inner = circle(r.r - band), pts = circle(r.r);
         // Filled only when wholly in front of the camera (the hairline below clips itself).
+        c.globalAlpha = far;
         if (outer.every(p => p.z > NEAR)) {
           c.beginPath();
           for (const ring of [outer, inner]) ring.forEach((p, i) => { const s = this.screen(p); if (i) c.lineTo(s.x, s.y); else c.moveTo(s.x, s.y); });
@@ -260,13 +289,14 @@
           const p = pts[Math.floor(mod(i * 4 + time * r.spin * 64 / TAU * 4, 64))];
           if (p.z < NEAR) continue;
           const q = this.screen(p), sz = clamp(q.scale * .9, .8, 2.2);
-          c.globalAlpha = .34 + .41 * Math.max(0, Math.sin(time * 1.3 + i * 1.7)); c.fillRect(q.x - sz / 2, q.y - sz / 2, sz, sz);
+          c.globalAlpha = far * (.34 + .41 * Math.max(0, Math.sin(time * 1.3 + i * 1.7))); c.fillRect(q.x - sz / 2, q.y - sz / 2, sz, sz);
         }
         c.globalAlpha = 1;
       }
     }
     drawPylons(time) {
-      const c = this.ctx, list = [], beacons = [];
+      const c = this.ctx, list = [], beacons = []; if (this.far <= 0) return;
+      c.globalAlpha = this.far;
       for (const p of this.pylons) {
         const x = this.center(p.z) + p.side * p.off, q = this.cam(x, 0, p.z);
         if (q.z > -8 && q.z < 560) list.push({ p, x, dist: q.z });
@@ -298,7 +328,7 @@
         beacons.push(this.cam(x, top + .8, p.z), .2 + .7 * Math.max(0, Math.sin(time * p.rate * TAU + p.blink)) ** 3);
       }
       const img = glow('255,184,124');
-      for (let i = 0; i < beacons.length; i += 2) this.sprite(img, beacons[i], 7, beacons[i + 1]);
+      for (let i = 0; i < beacons.length; i += 2) this.sprite(img, beacons[i], 7, beacons[i + 1] * this.far);
       c.globalAlpha = 1;
     }
     drawDeck(time) {
@@ -311,7 +341,7 @@
       // Transverse seams fixed in the world, batched into distance bands.
       for (const [d0, d1, a] of [[-20, 50, .14], [50, 110, .09], [110, 200, .045]]) {
         c.beginPath();
-        for (let z = Math.ceil((this.camera + d0) / 6) * 6; z < this.camera + d1; z += 6) { const d = z - this.camera; this.trace([this.rp(-8.5, 0, d), this.rp(8.5, 0, d)]); }
+        for (let z = Math.ceil((this.camera + d0) / 6) * 6; z < this.camera + Math.min(d1, this.reach); z += 6) { const d = z - this.camera; this.trace([this.rp(-8.5, 0, d), this.rp(8.5, 0, d)]); }
         this.hairStroke(`rgba(176,140,102,${a})`);
       }
       c.globalCompositeOperation = 'lighter';
@@ -326,14 +356,14 @@
       // Lane dividers: dashes fixed in the world, grouped by distance band.
       for (const [d0, d1, a] of [[-20, 45, .3], [45, 110, .19], [110, 210, .1]]) {
         c.beginPath();
-        for (let z = Math.ceil((this.camera + d0) / 5) * 5; z < this.camera + d1; z += 5)
+        for (let z = Math.ceil((this.camera + d0) / 5) * 5; z < this.camera + Math.min(d1, this.reach); z += 5)
           for (const x of [-4.25, 4.25]) this.trace([this.rp(x, .01, z - this.camera), this.rp(x, .01, z - this.camera + 1.8)]);
         this.hairStroke(`rgba(178,202,214,${a})`);
       }
       // Chevrons point down the road; a travelling wave lights a few of them as filled strokes.
       c.beginPath();
       const lit = [];
-      for (let z = Math.ceil((this.camera + 3) / 9) * 9; z < this.camera + 150; z += 9) {
+      for (let z = Math.ceil((this.camera + 3) / 9) * 9; z < this.camera + Math.min(150, this.reach); z += 9) {
         const d = z - this.camera, wave = Math.max(0, Math.sin(z * .23 - time * 3.2)) ** 6;
         if (wave > .12) lit.push(d, (.07 + wave * .55) * clamp(1.1 - d / 150, 0, 1), .05 + wave * .07);
         else this.trace([this.rp(-1.3, .02, d), this.rp(0, .02, d + 1.3), this.rp(1.3, .02, d)]);
@@ -350,7 +380,7 @@
       const base = this.camera - 12;
       for (let i = 0; i < 6; i++) {
         const z = base + mod(i * 41 + time * 34 - base, 250), d = z - this.camera;
-        if (d < -10 || d > 235) continue;
+        if (d < -10 || d > Math.min(235, this.reach)) continue;
         const fade = clamp(1.1 - d / 230, 0, 1);
         for (let k = 0; k < 3; k++) if (this.dash(0, .04 + k * .035, .02, d - 7 + k * 2.4, d - 4.8 + k * 2.4)) { c.globalAlpha = (.18 + k * .3) * fade; c.fill(); }
       }
@@ -372,7 +402,7 @@
         // Low guard rail with posts, replacing the old free-standing light bars.
         this.hairline(this.along(side * 9.5, .8, -30, 236), 'rgba(158,186,202,.32)');
         c.beginPath();
-        for (let z = Math.ceil((this.camera - 24) / 6) * 6; z < this.camera + 150; z += 6)
+        for (let z = Math.ceil((this.camera - 24) / 6) * 6; z < this.camera + Math.min(150, this.reach); z += 6)
           this.trace([this.rp(side * 9.5, 0, z - this.camera), this.rp(side * 9.5, .8, z - this.camera)]);
         this.hairStroke('rgba(140,166,182,.24)');
       }
@@ -381,7 +411,7 @@
         // Chasing nodes on the rail and small lamps on the guard rail: fixed colours, varying alpha.
         const lamps = [];
         c.fillStyle = 'rgb(255,214,172)';
-        for (let z = Math.ceil((this.camera - 24) / 6) * 6; z < this.camera + 170; z += 6) {
+        for (let z = Math.ceil((this.camera - 24) / 6) * 6; z < this.camera + Math.min(170, this.reach); z += 6) {
           const d = z - this.camera, p = this.rp(side * 8.5, .05, d); if (p.z < NEAR + .5) continue;
           const s = this.screen(p); if (s.x < -10 || s.x > this.w + 10 || s.y > this.h + 10) continue;
           const wave = Math.max(0, Math.sin(z * .19 - time * 2.6 + side)) ** 8, fade = clamp(1.1 - d / 170, 0, 1);
@@ -400,11 +430,34 @@
         const base = this.camera - 16;
         for (let i = 0; i < 5; i++) {
           const z = base + mod(i * 53 + side * 19 + time * 27 - base, 262), d = z - this.camera;
-          if (d < -14 || d > 240) continue;
+          if (d < -14 || d > Math.min(240, this.reach)) continue;
           const fade = clamp(1.15 - d / 240, 0, 1);
           for (let k = 0; k < 3; k++) if (this.dash(side * 8.5, .05 + k * .04, .02, d - 9 + k * 3, d - 6 + k * 3)) { c.globalAlpha = (.14 + k * .3) * fade; c.fill(); }
         }
       }
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    }
+    // The arrival's power front: a bright seam racing down the deck with a faint scanning wall
+    // above it and sparks on both rails. Everything behind it is already lit.
+    drawFront() {
+      const c = this.ctx, R = this.reach; if (R < -6) return;
+      c.globalCompositeOperation = 'lighter'; c.globalAlpha = 1;
+      const base = this.screen(this.rp(0, 0, Math.max(R, 2.5))), wake = this.screen(this.rp(0, 0, Math.max(R - 16, 2)));
+      if (this.dash(0, 8.5, .02, R - 16, R)) {
+        const g = c.createLinearGradient(0, wake.y, 0, Math.min(wake.y - .5, base.y));
+        g.addColorStop(0, 'rgba(255,196,130,0)'); g.addColorStop(1, 'rgba(255,214,160,.26)');
+        c.fillStyle = g; c.fill();
+      }
+      if (this.shape([this.rp(-8.5, 0, R), this.rp(8.5, 0, R), this.rp(8.5, 5.5, R), this.rp(-8.5, 5.5, R)])) {
+        const top = this.screen(this.rp(0, 5.5, Math.max(R, 2.5))), g = c.createLinearGradient(0, base.y, 0, Math.min(base.y - .5, top.y));
+        g.addColorStop(0, 'rgba(255,206,146,.2)'); g.addColorStop(1, 'rgba(255,206,146,0)');
+        c.fillStyle = g; c.fill();
+      }
+      if (this.dash(0, 8.6, .03, R - .5, R)) { c.fillStyle = 'rgba(255,226,186,.8)'; c.fill(); }
+      this.hairline([this.rp(-8.6, .03, R), this.rp(8.6, .03, R)], 'rgba(255,238,210,.95)');
+      const spark = glow(WARM, true);
+      for (const x of [-8.5, 8.5]) { const p = this.rp(x, .2, R); if (p.z >= NEAR) this.sprite(spark, p, clamp(this.screen(p).scale * 1.4, 3, 60), .95); }
+      const mid = this.rp(0, .4, R); if (mid.z >= NEAR) this.sprite(glow(GOLD), mid, clamp(this.screen(mid).scale * 5, 8, 160), .35);
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
     }
     drawGates(time) {
@@ -412,9 +465,11 @@
       for (let z = Math.ceil((this.camera - 10 - 26) / 30) * 30 + 26; z < this.camera + 246; z += 30) list.push({ z, kind: Math.round((z - 26) / 30) % 2 === 0 ? 'arch' : 'frame' });
       for (let z = Math.ceil((this.camera - 10 - 41) / 60) * 60 + 41; z < this.camera + 246; z += 60) list.push({ z, kind: 'ring' });
       for (const g of list) { g.d = g.z - this.camera; g.fade = clamp((g.d + 10) / 22, 0, 1) * clamp(1.15 - g.d / 240, .04, 1); }
-      list.sort((a, b) => b.d - a.d);
+      // While the road powers on, gates exist only behind the front and flare as it passes.
+      const booting = this.boot < BOOT_END, gates = list.filter(g => g.d < this.reach).sort((a, b) => b.d - a.d);
+      for (const g of gates) g.flash = booting ? clamp(1 - (this.reach - g.d) / 45, 0, 1) : 0;
       // Pass 1: structures. Dark bodies are filled outlines in each gate's plane.
-      for (const g of list) {
+      for (const g of gates) {
         const { d, fade } = g;
         if (g.kind === 'ring') {
           // Thin portal ring enclosing the whole road, drawn as turning dashes in one path.
@@ -423,7 +478,7 @@
             const a0 = k / 18 * TAU + time * .35;
             this.trace([0, .5, 1].map(t => { const a = a0 + t * .17; return this.rp(Math.cos(a) * 14.5, 4.4 + Math.sin(a) * 14.5, d); }));
           }
-          this.hairStroke(`rgba(170,208,226,${(.24 * fade).toFixed(3)})`);
+          this.hairStroke(`rgba(170,208,226,${(.24 * fade * (1 + 2 * g.flash)).toFixed(3)})`);
           continue;
         }
         const apex = this.rp(0, g.kind === 'arch' ? 11.8 : 10.6, d); if (apex.z < NEAR) continue;
@@ -435,8 +490,8 @@
       // Pass 2: light, all additive.
       c.globalCompositeOperation = 'lighter';
       const warm = glow(WARM);
-      for (const g of list) {
-        const { d, fade } = g;
+      for (const g of gates) {
+        const { d } = g, fade = g.fade * (1 + 1.8 * g.flash);
         if (!g.lit) continue;
         if (g.kind === 'arch') {
           // Three running lights: short filled sections of the arch body.
@@ -468,7 +523,7 @@
       let hot = -1;
       for (let i = 0; i < this.points.length; i += step) {
         const p = this.points[i], d = base + mod(p.z - base, 262) - this.camera;
-        if (d > 190) continue; // sub-pixel and faint by here; the horizon glow carries the far end
+        if (d > 190 || d > this.reach) continue; // sub-pixel and faint by here; the horizon glow carries the far end
         const q = this.rp(p.x, .018, d); if (q.z < 1) continue;
         const pos = this.screen(q); if (pos.y > this.h + 5 || pos.x < -5 || pos.x > this.w + 5) continue;
         const a = (.18 + p.light * .46) * clamp(1 - d / 260, 0, 1), size = clamp(p.r * pos.scale, .25, 2.1);
@@ -483,19 +538,25 @@
     }
     drawDust(time) {
       const c = this.ctx, step = this.mobile ? 2 : 1, base = this.camera - 20;
-      const streak = clamp(this.velocity * .05, -6, 6), moving = Math.abs(streak) > .15;
-      // Streaks are hairlines batched per colour and distance band.
-      const bands = moving ? [0, 1, 2, 3, 4, 5].map(() => new Path2D()) : null;
+      const span = 6 + 10 * this.warp, streak = clamp(this.velocity * .05, -span, span), moving = Math.abs(streak) > .15;
+      // Streaks are hairlines batched per colour and distance band; in hyperspace each streak
+      // gets a longer, blueshifted tail.
+      const bands = moving ? [0, 1, 2, 3, 4, 5].map(() => new Path2D()) : null, doppler = this.warp > .05 ? new Path2D() : null;
       c.globalCompositeOperation = 'lighter';
       let cool = -1;
       for (let i = 0; i < this.dust.length; i += step) {
         const m = this.dust[i], d = base + mod(m.z - base, 200) - this.camera, y = m.y + Math.sin(time * .3 + m.drift) * .5;
+        if (d > this.reach) continue;
         const p = this.rp(m.x, y, d); if (p.z < 1.2) continue;
         const s = this.screen(p); if (s.x < -20 || s.x > this.w + 20 || s.y < -20 || s.y > this.h + 20) continue;
         const warm = m.r > .8 ? 1 : 0;
         if (moving) {
           const q = this.rp(m.x, y, d + streak);
-          if (q.z > NEAR) { const e = this.screen(q), path = bands[warm * 3 + (p.z < 40 ? 0 : p.z < 100 ? 1 : 2)]; path.moveTo(s.x, s.y); path.lineTo(e.x, e.y); continue; }
+          if (q.z > NEAR) {
+            const e = this.screen(q), path = bands[warm * 3 + (p.z < 40 ? 0 : p.z < 100 ? 1 : 2)]; path.moveTo(s.x, s.y); path.lineTo(e.x, e.y);
+            if (doppler) { const r = this.rp(m.x, y, d + streak * (1 + 1.6 * this.warp)); if (r.z > NEAR) { const f = this.screen(r); doppler.moveTo(e.x, e.y); doppler.lineTo(f.x, f.y); } }
+            continue;
+          }
         }
         if (warm !== cool) { cool = warm; c.fillStyle = warm ? 'rgb(240,214,176)' : 'rgb(170,196,214)'; }
         const size = clamp(s.scale * .035, .5, 2.2);
@@ -507,13 +568,14 @@
           c.strokeStyle = i < 3 ? `rgba(170,196,214,${[.42, .26, .12][i % 3]})` : `rgba(240,214,176,${[.5, .32, .15][i % 3]})`;
           c.stroke(path);
         });
+        if (doppler) { c.strokeStyle = `rgba(130,168,255,${(.45 * this.warp).toFixed(3)})`; c.stroke(doppler); }
       }
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
     }
     drawHorizon() {
       const p = this.rp(0, 0, 246); if (p.z < NEAR) return;
       this.ctx.globalCompositeOperation = 'lighter';
-      this.sprite(glow(GOLD, true), p, 70, .36);
+      this.sprite(glow(GOLD, true), p, 70, .36 * this.far);
       this.ctx.globalAlpha = 1; this.ctx.globalCompositeOperation = 'source-over';
     }
   }

@@ -17,6 +17,17 @@
   let paused = reducedQuery.matches, reduced = reducedQuery.matches;
   let auto = false, autoTop = 0, scenery = false, raf = 0, last = 0, time = 0, dirty = true;
   let touch = null, aiming = false, overControls = false, band = { top: 0, bottom: innerHeight }, reticleState = '', renderMs = 0;
+  // Arrival: the boot clock drives the scene's timeline (RoadScene.effects) and the title
+  // decode; any wheel, key or press fast-forwards it. Reduced motion starts at the end.
+  const BOOT_END = scene.bootEnd, root = document.documentElement, hyperspace = $('hyperspace');
+  let boot = reduced ? BOOT_END : 0, bootRate = 1, titled = reduced;
+  scene.boot = boot;
+  if (!reduced && window.RoadFx) {
+    RoadFx.prepare(document.querySelector('#intro .eyebrow'), { delay: 0, stagger: .028, span: .3 });
+    RoadFx.prepare(document.querySelector('#intro h1'), { delay: .25, stagger: .11, span: .42 });
+    RoadFx.prepare(document.querySelector('#intro .intro-copy'), { delay: .75, stagger: .022, span: .26 });
+  } else root.classList.remove('fx-intro');
+  function skipIntro() { if (boot < BOOT_END) { bootRate = 7; titled = true; window.RoadFx?.hurry(); } }
 
   function controls() {
     $('autoButton').setAttribute('aria-pressed', String(auto));
@@ -29,7 +40,7 @@
     $('sceneryButton').setAttribute('aria-label', scenery ? '显示路牌' : '隐藏路牌');
   }
   // Last values written to the DOM, so a frame only touches what actually changed.
-  const shown = { fill: '', text: '', current: -1, intro: -1 };
+  const shown = { fill: '', text: '', current: -1, intro: -1, hyper: '' };
   function ui() {
     const fill = `scaleX(${target.toFixed(3)})`, text = `${Math.round(target * 100)}%`, current = Math.round(target * 3);
     if (fill !== shown.fill) $('progressFill').style.transform = shown.fill = fill;
@@ -47,6 +58,9 @@
       const intro = $('intro'); shown.intro = alpha;
       intro.style.opacity = String(alpha); intro.inert = alpha < .1; intro.style.visibility = alpha < .01 ? 'hidden' : 'visible';
     }
+    // Hyperspace tints the screen edges; the overlay's opacity is a compositor-only change.
+    const hyper = (scene.warp * .85).toFixed(2);
+    if (hyper !== shown.hyper) hyperspace.style.opacity = shown.hyper = hyper;
     const state = overControls ? 'idle' : monitors.aim;
     if (state !== reticleState) { reticle.dataset.state = reticleState = state; }
   }
@@ -102,7 +116,16 @@
     look += (lookTarget - look) * ease; pitch += (pitchTarget - pitch) * ease;
     if (Math.abs(look - lookTarget) < .00001) look = lookTarget;
     if (Math.abs(pitch - pitchTarget) < .00001) pitch = pitchTarget;
-    const changing = Math.abs(camera - target) > .00001 || look !== lookTarget || pitch !== pitchTarget;
+    // The boot clock waits for the sky (at most 1.5 s), so the arrival never plays over a black sky.
+    if (boot < BOOT_END && (scene.skyReady || now > 1500)) {
+      boot = Math.min(BOOT_END, boot + dt / 1000 * bootRate);
+      if (!titled && boot > .7) { titled = true; window.RoadFx?.play(); }
+      if (boot >= BOOT_END) root.classList.remove('fx-intro');
+    }
+    const hold = window.__hold; // capture aid only: { boot, time } pins the effect clocks
+    if (hold) { if (hold.boot != null) boot = hold.boot; if (hold.time != null) time = hold.time; }
+    scene.boot = boot; scene.calm = paused || reduced;
+    const changing = Math.abs(camera - target) > .00001 || look !== lookTarget || pitch !== pitchTarget || boot < BOOT_END || scene.warp > 0;
     if (!paused) time += dt / 1000;
     const settling = monitors.candidate !== monitors.focused || monitors.items.some(m => m.opening > .001 && m.opening < .999);
     if (dirty || !paused || changing || settling) {
@@ -161,6 +184,7 @@
     e.preventDefault(); go(button.dataset.go);
   }));
   const onControl = target => target instanceof Element && target.closest('.masthead,.travel-bar');
+  for (const type of ['wheel', 'keydown', 'pointerdown']) window.addEventListener(type, skipIntro, { passive: true });
   // Any input ends calm pacing at once.
   for (const type of ['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown'])
     window.addEventListener(type, () => { inputAt = performance.now(); }, { passive: true, capture: true });
@@ -228,11 +252,14 @@
     else { last = 0; dirty = true; wake(); }
   });
   reducedQuery.addEventListener('change', event => {
-    reduced = event.matches; paused = reduced; stopAuto(); measureScroll(); dirty = true; wake();
+    reduced = event.matches; paused = reduced; stopAuto(); measureScroll(); dirty = true;
+    if (reduced) { boot = BOOT_END; root.classList.remove('fx-intro'); }
+    wake();
   });
   scene.onready = () => { dirty = true; wake(); };
   // Read-only diagnostics used by local regression checks; no user data or APIs.
   window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, time,
+    boot, warp: scene.warp, velocity: scene.velocity, reach: scene.reach, baseFocal: scene.baseFocal, meteor: !!scene.sky.meteor,
     view: { x: scene.cameraX, z: scene.camera, yaw: scene.yaw, heading: scene.heading, pitch: scene.pitch, focal: scene.focal,
       horizon: scene.horizon, baseHorizon: scene.baseHorizon, aimX: scene.aimX, aimY: scene.aimY },
     aiming, reticle: reticleState, aimedLink: monitors.aimedLink?.href || null, renderMs, band,
