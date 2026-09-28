@@ -122,8 +122,9 @@
     if (Math.abs(pitch - pitchTarget) < .00001) pitch = pitchTarget;
     // The boot clock waits for the sky (at most 1.5 s), so the arrival never plays over a black sky.
     if (boot < BOOT_END && (scene.skyReady || now > 1500)) {
+      if (!boot) root.classList.add('fx-go'); // the arrival starts: bars fade in now
       boot = Math.min(BOOT_END, boot + dt / 1000 * bootRate);
-      if (!titled && boot > .35) { titled = true; window.RoadFx?.play(); }
+      if (!titled) { titled = true; window.RoadFx?.play(); } // the title decodes as the arrival starts
       if (boot >= BOOT_END) root.classList.remove('fx-intro');
     }
     const hold = window.__hold; // capture aid only: { boot, time } pins the effect clocks

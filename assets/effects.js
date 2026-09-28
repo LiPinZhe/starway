@@ -63,7 +63,9 @@
       if (!job.running) continue;
       job.t += dt * job.rate;
       for (const g of job.glyphs) {
-        if (job.t < g.start || g.state === 2) continue;
+        // Every glyph shows (scrambled) from the first frame, so the line has its full size at
+        // once (it paints as one element: an early Largest Contentful Paint); glyphs then lock in turn.
+        if (g.state === 2) continue;
         if (job.t < g.lock) {
           // Glyphs change about 18 times a second while scrambling.
           if (g.state === 0) { g.state = 1; g.s.className = 'fx-scram'; }
