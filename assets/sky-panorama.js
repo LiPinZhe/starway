@@ -297,7 +297,7 @@ void main(){
     // Bright stars and planets share the road camera (drawn before the road). In hyperspace the
     // stars stretch into hairline streaks along the rays from the direction of travel.
     drawBodies(c, s, time) {
-      const fade = s.skyBright; if (fade <= 0) return;
+      const fade = s.skyBright; if (fade <= 0) { this.warm(s); return; }
       const limit = Math.atan(s.w / 2 / s.focal) + .05, first = Math.floor((s.yaw - limit + Math.PI) / TAU * 72);
       const last = Math.floor((s.yaw + limit + Math.PI) / TAU * 72), bright = [];
       const warp = s.warp, streak = warp > .03, tailK = 1 - .3 * warp * s.warpDir, fx = s.foeX, fy = s.horizon;
@@ -341,6 +341,14 @@ void main(){
         c.drawImage(b.sprite, p.x - size / 2, p.y - size / 2, size, size);
       }
       c.globalAlpha = 1;
+    }
+    // Before the arrival (nothing drawn yet) the planet sprites are made one per frame, so the
+    // arrival's first frame does not have to build them.
+    warm(s) {
+      const b = this.bodies.find(body => !body.sprite && !body.far); if (!b) return;
+      const p = s.projectWorld(b.x, b.y + 3.6, b.z); if (p.depth < 10) { b.far = true; return; }
+      b.spriteR = Math.min(460, Math.ceil(Math.min(420, Math.ceil(b.radius * p.scale * s.dpr * 1.08)) * 1.25));
+      b.sprite = planetSprite(b.spriteR, b.style);
     }
     // A shooting star every 4–9 s: anchored in the sky (it turns with the view), a tapered
     // gradient tail and a small glowing head. None while the scene is calm or in hyperspace.
