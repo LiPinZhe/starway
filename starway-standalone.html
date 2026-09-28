@@ -376,7 +376,7 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
       <span><strong>你的姓名</strong><small>COMPUTER VISION</small></span>
     </a>
     <nav class="navigation" aria-label="控制">
-      <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="AUTO 自动前进"><span aria-hidden="true">▶</span><b>AUTO</b></button>
+      <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="AUTO 自动播放"><span aria-hidden="true">▶</span><b>AUTO</b></button>
     </nav>
   </header>
 
@@ -1742,7 +1742,73 @@ void main(){
     RoadFx.prepare(document.querySelector('#intro h1'), { delay: .12, stagger: .09, span: .38 });
     RoadFx.prepare(document.querySelector('#intro .intro-copy'), { delay: .55, stagger: .02, span: .24 });
   } else root.classList.remove('fx-intro');
-  function skipIntro() { if (boot < BOOT_END) { bootRate = 7; titled = true; window.RoadFx?.hurry(); } }
+  function skipIntro() { if (boot < BOOT_END) { acted = true; bootRate = 7; titled = true; window.RoadFx?.hurry(); } }
+  // Autoplay: a guided tour that drives to each roadside screen, turns to it, opens it, holds
+  // long enough to read, turns back and drives on; it ends facing the last screen. On by
+  // default once the arrival has finished (not under reduced motion, not with ?autoplay=0,
+  // not if the visitor already acted). Any wheel, key, click, touch or a deliberate mouse
+  // movement hands control back; the AUTO button (or Space) toggles it and replays at the end.
+  const autoplay = !reduced && new URLSearchParams(location.search).get('autoplay') !== '0';
+  let acted = false, swallowClick = false;
+  const tour = { phase: 'idle', clock: 0, t0: 0, dur: 0, index: 0, from: 0, to: 0, yaw0: 0, yaw1: 0, up0: 0, up1: 0, pointer: null };
+  const smoother = t => t * t * t * (t * (t * 6 - 15) + 10);
+  // Seconds to read a screen: grows with its text, within 5.5–10 s.
+  const readTime = item => clamp(3 + item.element.textContent.replace(/\s+/g, '').length * .035, 5.5, 10);
+  function setPhase(phase, dur) { tour.phase = phase; tour.t0 = tour.clock; tour.dur = dur; }
+  function tourBegin(intro) {
+    const i = monitors.items.findIndex(item => item.station >= target - .004);
+    tour.index = i < 0 ? monitors.items.length - 1 : i; tour.pointer = null;
+    if (intro) setPhase('hold', 2.2); else tourDrive();
+  }
+  // Drive at about 9 road units per second with an ease-in-out profile (never fast enough
+  // for hyperspace), then turn to the screen.
+  function tourDrive() {
+    tour.from = target; tour.to = monitors.items[tour.index].station;
+    if (Math.abs(tour.to - tour.from) < .002) tourTurn();
+    else setPhase('drive', clamp(Math.abs(tour.to - tour.from) * scene.routeLength / 9, 2.5, 12));
+  }
+  // Face the screen with the crosshair on the middle of its opened panel (as keyboard focus does).
+  function tourTurn() {
+    const item = monitors.items[tour.index], dx = item.anchor.x - scene.cameraX, dz = item.anchor.z - scene.camera;
+    tour.yaw0 = lookTarget; tour.up0 = pitchTarget;
+    tour.yaw1 = clamp(Math.atan2(dx, dz) - scene.heading, -maxLook, maxLook);
+    tour.up1 = clamp(Math.atan2(monitors.openMiddle(item) - 3.6, Math.hypot(dx, dz)) - Math.atan((scene.baseHorizon - scene.aimY) / scene.focal), -maxDown, maxUp);
+    setPhase('turn', 1.2);
+  }
+  // The tour clock runs only while frames are drawn, so a hidden tab never makes it jump.
+  function tourStep(dt) {
+    tour.clock += dt / 1000 * (window.__hold?.tourRate || 1); // (tourRate: test aid only)
+    const u = clamp((tour.clock - tour.t0) / tour.dur), e = smoother(u);
+    if (tour.phase === 'hold') { if (u >= 1) tourDrive(); }
+    else if (tour.phase === 'drive') {
+      target = tour.from + (tour.to - tour.from) * e; lookTarget = 0; pitchTarget = 0;
+      if (u >= 1) tourTurn();
+    } else if (tour.phase === 'turn') {
+      lookTarget = tour.yaw0 + (tour.yaw1 - tour.yaw0) * e; pitchTarget = tour.up0 + (tour.up1 - tour.up0) * e;
+      if (u > .55) monitors.keyboard = tour.index; // the screen opens as the view arrives
+      if (u >= 1) setPhase('read', readTime(monitors.items[tour.index]));
+    } else if (tour.phase === 'read') {
+      monitors.keyboard = tour.index;
+      if (u >= 1) {
+        if (tour.index >= monitors.items.length - 1) { tour.phase = 'idle'; auto = false; controls(); return; } // the last screen stays open
+        monitors.keyboard = -1; tour.yaw0 = lookTarget; tour.up0 = pitchTarget; setPhase('return', 1);
+      }
+    } else if (tour.phase === 'return') {
+      lookTarget = tour.yaw0 * (1 - e); pitchTarget = tour.up0 * (1 - e);
+      if (u >= 1) { tour.index += 1; tourDrive(); }
+    }
+    // Native scroll follows, so taking over never jumps backward.
+    autoTop = target * maxScroll();
+    if (Math.abs(scrollY - autoTop) > .5) window.scrollTo({ top: autoTop, behavior: 'instant' });
+  }
+  function startAutoplay(intro) {
+    auto = true; paused = false; reduced = false;
+    if (target >= .999) { target = 0; camera = 0; window.scrollTo(0, 0); } // at the end: play again from the start
+    autoTop = target * maxScroll(); tourBegin(intro);
+    controls(); dirty = true; last = 0; wake();
+  }
+  // Visitor input: from now on the visitor steers.
+  function takeOver() { acted = true; if (auto) stopAuto(); }
 
   // Toggle buttons keep one accessible name and report their state through aria-pressed
   // (WAI-ARIA); the AUTO button's name includes its visible text (WCAG 2.5.3).
@@ -1821,13 +1887,7 @@ void main(){
         if (lateAvg > 1.3 && now - paceAt > 1500) { pace += 1; paceAt = now; lateAvg = 1; }
       } else scene.adapt(interval, budget, now);
     }
-    if (auto && !paused) {
-      // Keep native scroll in sync so stopping auto travel never jumps backward.
-      target = clamp(target + dt / 75000 * (monitors.focused >= 0 ? .18 : 1));
-      autoTop = target * maxScroll();
-      window.scrollTo({ top: autoTop, behavior: 'instant' });
-      if (target >= 1) { auto = false; controls(); }
-    }
+    if (auto && !paused) tourStep(dt);
     // Travel always follows the visitor; pausing only freezes ambient animation.
     camera = reduced ? target : camera + (target - camera) * (1 - Math.exp(-dt / 140));
     if (Math.abs(camera - target) < .000005) camera = target;
@@ -1840,7 +1900,7 @@ void main(){
       if (!boot) root.classList.add('fx-go'); // the arrival starts: bars fade in now
       boot = Math.min(BOOT_END, boot + dt / 1000 * bootRate);
       if (!titled) { titled = true; window.RoadFx?.play(); } // the title decodes as the arrival starts
-      if (boot >= BOOT_END) root.classList.remove('fx-intro');
+      if (boot >= BOOT_END) { root.classList.remove('fx-intro'); if (autoplay && !acted) startAutoplay(true); }
     }
     const hold = window.__hold; // capture aid only: { boot, time } pins the effect clocks
     if (hold) { if (hold.boot != null) boot = hold.boot; if (hold.time != null) time = hold.time; }
@@ -1862,9 +1922,13 @@ void main(){
     if (chained) wake();
     costs[costAt++ % costs.length] = performance.now() - begin;
   }
-  function stopAuto() { auto = false; controls(); }
+  // Stopping mid-tour releases the screen the tour was holding open (the crosshair may keep it).
+  function stopAuto() {
+    if (tour.phase !== 'idle' && monitors.keyboard === tour.index && document.activeElement !== monitors.items[tour.index].element) monitors.keyboard = -1;
+    tour.phase = 'idle'; auto = false; controls();
+  }
   function go(index) {
-    stopAuto();
+    acted = true; stopAuto();
     const station = monitors.items[clamp(Number(index), 0, 3)].station;
     window.scrollTo({ top: station * maxScroll(), behavior: reduced ? 'instant' : 'smooth' });
   }
@@ -1874,13 +1938,8 @@ void main(){
     dirty = true; wake();
   }
   function toggleAuto() {
-    auto = !auto;
-    if (auto) {
-      paused = false; reduced = false;
-      if (target >= .999) { target = 0; camera = 0; window.scrollTo(0, 0); }
-      autoTop = target * maxScroll();
-    }
-    controls(); dirty = true; last = 0; wake();
+    acted = true;
+    if (auto) { stopAuto(); dirty = true; wake(); } else startAutoplay(false);
   }
   // The pointer steers only between the header and the travel bar.
   function measureBand() {
@@ -1895,6 +1954,7 @@ void main(){
     controls(); dirty = true; wake();
   });
   $('sceneryButton').addEventListener('click', () => {
+    takeOver();
     scenery = !scenery;
     document.body.classList.toggle('scenery', scenery);
     $('sceneContent').inert = scenery;
@@ -1919,6 +1979,13 @@ void main(){
     const over = !!onControl(event.target);
     if (over !== overControls) { overControls = over; dirty = true; wake(); }
     if (over) return;
+    // While the tour plays (or is about to), a small bump of the mouse is ignored; a deliberate
+    // movement takes over.
+    if (auto || (autoplay && !acted && boot < BOOT_END)) {
+      if (!tour.pointer) tour.pointer = { x: event.clientX, y: event.clientY };
+      if (Math.hypot(event.clientX - tour.pointer.x, event.clientY - tour.pointer.y) < Math.min(innerWidth, innerHeight) * .18) return;
+      takeOver();
+    }
     monitors.keyboard = -1;
     // Absolute mapping: where the pointer sits in the scene is where the camera looks.
     // Right looks right, up looks up; the crosshair stays in the middle of the screen.
@@ -1926,26 +1993,32 @@ void main(){
     aim((event.clientX / innerWidth * 2 - 1) * maxLook, v < 0 ? -v * maxUp : -v * maxDown);
   }, { passive: true });
   window.addEventListener('pointerdown', event => {
-    if (event.pointerType !== 'touch' || onControl(event.target)) return;
+    if (onControl(event.target)) return;
+    // A press on the scene takes over; the click that follows does not also open a link.
+    if (auto) swallowClick = event.pointerType !== 'touch';
+    takeOver();
+    if (event.pointerType !== 'touch') return;
     touch = { id: event.pointerId, x: event.clientX, y: event.clientY, look: lookTarget, pitch: pitchTarget };
     monitors.keyboard = -1;
   }, { passive: true });
   for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, () => { touch = null; }, { passive: true });
   // With the cursor hidden, a click acts on whatever link sits under the crosshair.
   window.addEventListener('click', event => {
+    if (swallowClick) { swallowClick = false; return; }
     if (!aiming || onControl(event.target) || event.target.closest?.('a')) return;
     const link = monitors.aimedLink;
     if (link) { event.preventDefault(); link.click(); }
   });
-  window.addEventListener('wheel', () => { if (auto) stopAuto(); }, { passive: true });
+  window.addEventListener('wheel', takeOver, { passive: true });
   window.addEventListener('scroll', () => {
     // A scroll the auto driver did not make (touch, keys, scrollbar) hands travel back.
-    if (auto && Math.abs(scrollY - autoTop) > 3) stopAuto();
+    if (auto && Math.abs(scrollY - autoTop) > 3) takeOver();
     if (!auto) target = clamp(scrollY / maxScroll());
     dirty = true; wake();
   }, { passive: true });
   monitors.items.forEach(item => item.element.addEventListener('focus', event => {
     if (event.target !== item.element) return;
+    takeOver();
     monitors.keyboard = item.index;
     const dx = item.anchor.x - scene.cameraX, dz = item.anchor.z - scene.camera;
     // Face the screen and put the crosshair on the middle of its opened panel.
@@ -1955,7 +2028,7 @@ void main(){
   document.addEventListener('keydown', event => {
     if (event.target.closest('input,textarea,select,[contenteditable=true]')) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault(); monitors.keyboard = -1;
+      event.preventDefault(); takeOver(); monitors.keyboard = -1;
       aim(lookTarget + (event.key === 'ArrowRight' ? .12 : -.12));
     }
     if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); go(event.key === 'Home' ? 0 : 3); }
@@ -1982,6 +2055,7 @@ void main(){
   // Read-only diagnostics used by local regression checks; no user data or APIs.
   window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, time,
     boot, warp: scene.warp, velocity: scene.velocity, reach: scene.reach, baseFocal: scene.baseFocal, meteor: !!scene.sky.meteor,
+    tour: tour.phase, tourIndex: tour.index, acted,
     view: { x: scene.cameraX, z: scene.camera, yaw: scene.yaw, heading: scene.heading, pitch: scene.pitch, focal: scene.focal,
       horizon: scene.horizon, baseHorizon: scene.baseHorizon, aimX: scene.aimX, aimY: scene.aimY },
     aiming, reticle: reticleState, aimedLink: monitors.aimedLink?.href || null, renderMs, band,
