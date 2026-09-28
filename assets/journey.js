@@ -263,6 +263,7 @@
     wake();
   });
   scene.onready = () => { dirty = true; wake(); };
+  monitors.onmeasured = () => { dirty = true; wake(); };
   // Read-only diagnostics used by local regression checks; no user data or APIs.
   window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, time,
     boot, warp: scene.warp, velocity: scene.velocity, reach: scene.reach, baseFocal: scene.baseFocal, meteor: !!scene.sky.meteor,

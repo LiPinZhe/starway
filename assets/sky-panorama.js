@@ -136,9 +136,11 @@ void main(){
       canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); if (this.mode === 'webgl') { this.toFallback(); this.onready?.(); } });
       this.load();
     }
-    // Every star is drawn crisply per frame; 72 azimuth bins keep the loop to the view.
-    makeStars() {
-      for (let made = 0, count = window.innerWidth < 761 ? 5000 : 8000; made < count;) {
+    // Every star is drawn crisply per frame; 72 azimuth bins keep the loop to the view. Stars are
+    // made 2500 per task so no single task runs long.
+    makeStars(left = window.innerWidth < 761 ? 5000 : 8000) {
+      const batch = Math.min(left, 2500);
+      for (let made = 0; made < batch;) {
         const z = random() * 2 - 1, phi = random() * TAU - Math.PI, theta = Math.asin(z);
         if (theta < -1) continue;
         const d = dir(phi, theta), band = Math.exp(-(((d[0] * BAND[0] + d[1] * BAND[1] + d[2] * BAND[2]) / .2) ** 2));
@@ -150,7 +152,8 @@ void main(){
           cp: Math.cos(phi), sp: Math.sin(phi) });
         made += 1;
       }
-      for (const bin of this.bins) bin.sort((p, q) => p.color - q.color);
+      if (left > batch) setTimeout(() => this.makeStars(left - batch), 0);
+      else for (const bin of this.bins) bin.sort((p, q) => p.color - q.color);
     }
     // Shaders compile while the panorama downloads and decodes: nothing queries the program
     // (which would wait for the compiler) until finishGL(), so startup is not blocked.

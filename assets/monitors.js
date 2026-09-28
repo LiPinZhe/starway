@@ -32,7 +32,7 @@
       });
       // Measuring forces a layout: it runs as its own task after startup (or on first use).
       this.measured = false;
-      setTimeout(() => { if (!this.measured) this.measure(); }, 0);
+      setTimeout(() => { if (!this.measured) { this.measure(); this.onmeasured?.(); } }, 0);
     }
     widths() {
       const narrow = this.scene.mobile, short = this.scene.shortView;
@@ -107,7 +107,9 @@
       this.aim = link ? 'link' : this.focused >= 0 || this.candidate >= 0 ? 'target' : 'none';
     }
     update(dt, instant = false) {
-      if (!this.measured) this.measure();
+      // Screens wait for their own measuring task (a frame or two at most) rather than forcing
+      // that layout inside an animation frame.
+      if (!this.measured) return;
       this.choose(dt);
       const ease = instant ? 1 : 1 - Math.exp(-dt / 170);
       const { closed, open } = this.widths(), short = this.scene.shortView;
