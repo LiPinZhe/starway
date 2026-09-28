@@ -130,7 +130,7 @@ void main(){
       const canvas = this.canvas;
       this.gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, powerPreference: 'low-power' });
       this.mode = this.gl && this.initGL() ? 'webgl' : '2d';
-      if (this.mode === 'webgl') this.gl.viewport(0, 0, canvas.width, canvas.height);
+      if (this.mode === 'webgl') { this.gl.viewport(0, 0, canvas.width, canvas.height); this.parallel = this.gl.getExtension('KHR_parallel_shader_compile'); }
       else this.ctx = canvas.getContext('2d');
       // A lost GPU context (driver reset) falls back to the 2D renderer rather than a black sky.
       canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); if (this.mode === 'webgl') { this.toFallback(); this.onready?.(); } });
@@ -161,6 +161,17 @@ void main(){
       gl.clearColor(.012, .024, .043, 1); gl.clear(gl.COLOR_BUFFER_BIT);
       return true;
     }
+    // Resolves once the program has linked, polling without blocking (KHR_parallel_shader_compile):
+    // the D3D shader compiler can take a few hundred milliseconds. Without the extension the
+    // status query in finishGL() simply waits.
+    linked() {
+      const gl = this.gl, ext = this.parallel;
+      if (!ext) return Promise.resolve();
+      return new Promise(resolve => {
+        const poll = () => (this.gl !== gl || gl.isContextLost() || gl.getProgramParameter(this.prog, ext.COMPLETION_STATUS_KHR)) ? resolve() : setTimeout(poll, 16);
+        poll();
+      });
+    }
     finishGL() {
       const gl = this.gl, prog = this.prog;
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
@@ -180,6 +191,7 @@ void main(){
           const blob = await (await fetch(this.src)).blob();
           const width = Math.min(this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE), (this.pxPerRad || 700) * TAU > 2600 ? 4096 : 2048);
           const bitmap = await createImageBitmap(blob, width < 4096 ? { resizeWidth: width, resizeHeight: width / 2, resizeQuality: 'high' } : undefined);
+          await this.linked();
           if (this.mode === 'webgl') {
             if (!this.finishGL()) throw new Error('shader');
             this.upload(bitmap); this.textureWidth = bitmap.width;
