@@ -2,7 +2,7 @@
 
 一份沿着光与粒子之路前进的交互式个人简历：滚动前进，鼠标即视角，屏幕中心的十字准心对准路边显示器时，屏幕会在原位转向你并展开内容。背景是一张随视角和道路转动的 360° 全景星空。
 
-![桌面首屏](previews/index-desktop.png)
+![开场：从超空间减速抵达，能量波把道路由近到远点亮，标题从乱码解码成正文](previews/arrival.webp)
 
 ## 在线查看
 
@@ -44,7 +44,7 @@ assets/sky-panorama.js  全景星空（WebGL）、星星、行星与流星
 assets/effects.js       标题与路牌的文字解码效果
 assets/monitors.js      路边显示器的固定底座、转动与展开
 assets/*.css            样式
-previews/               预览截图
+previews/               预览截图与开场动画（arrival.webp）
 starway-standalone.html 单文件版（由 tools/build-single.cjs 生成）
 tools/build-single.cjs  生成单文件版
 ```
