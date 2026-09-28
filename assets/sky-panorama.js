@@ -193,13 +193,19 @@ void main(){
         try {
           const blob = await (await fetch(this.src)).blob();
           const width = Math.min(this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE), (this.pxPerRad || 700) * TAU > 2600 ? 4096 : 2048);
-          const bitmap = await createImageBitmap(blob, width < 4096 ? { resizeWidth: width, resizeHeight: width / 2, resizeQuality: 'high' } : undefined);
+          // RGBA as decoded, no colour conversion (the panorama is sRGB): the upload is a plain copy.
+          const bitmap = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none',
+            ...(width < 4096 ? { resizeWidth: width, resizeHeight: width / 2, resizeQuality: 'high' } : {}) });
           await this.linked();
           if (this.mode === 'webgl') {
             if (!this.finishGL()) throw new Error('shader');
             this.upload(bitmap); this.textureWidth = bitmap.width;
-            bitmap.close(); this.ready = true; this.last = ''; this.onready?.();
-            return;
+            bitmap.close();
+            // One black draw now pays the first draw's one-time costs (driver-side shader work,
+            // mipmaps) here; the arrival starts from the next task.
+            if (this.view) { this.ready = true; this.render({ ...this.view, time: 0, bright: 0, warp: 0 }); this.ready = false; }
+            await new Promise(resolve => setTimeout(resolve, 0));
+            if (this.mode === 'webgl') { this.ready = true; this.last = ''; this.onready?.(); return; }
           }
           bitmap.close();
         } catch (error) { if (this.mode === 'webgl') this.toFallback(); }
@@ -224,7 +230,7 @@ void main(){
         cv.getContext('2d').drawImage(source, 0, 0, max, max / 2); source = cv;
       }
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, source);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
       gl.generateMipmap(gl.TEXTURE_2D);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
