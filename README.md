@@ -10,6 +10,8 @@
 
 本地查看：直接双击 `index.html` 即可（不需要安装依赖、服务器或 API）。
 
+单文件版：[`starway-standalone.html`](starway-standalone.html) 把整个网站（样式、脚本和星空贴图）打包进一个文件，不联网也能看。在 GitHub 上打开这个文件，点「Download raw file」下载，双击就能在浏览器里打开；也可以在线预览：<https://lipinzhe.github.io/starway/starway-standalone.html>。修改网站后，运行 `node tools/build-single.cjs` 重新生成。
+
 ## 操作
 
 | 操作 | 效果 |
@@ -43,6 +45,8 @@ assets/effects.js       标题与路牌的文字解码效果
 assets/monitors.js      路边显示器的固定底座、转动与展开
 assets/*.css            样式
 previews/               预览截图
+starway-standalone.html 单文件版（由 tools/build-single.cjs 生成）
+tools/build-single.cjs  生成单文件版
 ```
 
 姓名、单位与联系方式仍为占位内容，补充后即可替换 `index.html` 中对应文字。
