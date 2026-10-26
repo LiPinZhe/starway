@@ -97,7 +97,7 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
 /* ---- Effects: arrival, hyperspace, holographic screens, reticle lock-on ----
    Everything animates transform / opacity (compositor work) or runs briefly; all of it is
    switched off under prefers-reduced-motion. */
-.hyperspace{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;visibility:hidden;will-change:opacity;
+.hyperspace{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;visibility:hidden;
   background:radial-gradient(ellipse 72% 64% at 50% 47%,transparent 40%,rgba(72,112,190,.15) 70%,rgba(22,46,104,.44) 100%)}
 /* The bars appear when the scene is ready and the arrival starts (html.fx-go, set by journey.js),
    so every control works the moment it is visible; without scripts they appear after 5 s. */
@@ -153,3 +153,7 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
 .route-stop::after{content:"";position:absolute;inset:-14px}
 .scene-tools button::after{content:"";position:absolute;inset:-12px -6px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.hyperspace{display:none}}
+
+.fx-reveal{animation:label-reveal .4s ease-out both}
+@keyframes label-reveal{from{opacity:.45}to{opacity:1}}
+body.scene-idle :is(.world-sign,.reticle),body.scene-idle .world-sign *,body.scene-idle .reticle::after{animation-play-state:paused!important}

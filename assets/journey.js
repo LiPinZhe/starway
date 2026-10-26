@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  function startJourney(readerSeen) {
   const $ = id => document.getElementById(id);
   const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
   const scene = new RoadScene($('roadCanvas'), $('skyCanvas'));
@@ -24,24 +25,18 @@
   let reading = false, pausedBeforeReading = paused, pendingFocus = -1;
   let auto = false, autoTop = 0, scenery = false, raf = 0, last = 0, time = 0, dirty = true;
   let touch = null, aiming = false, overControls = false, band = { top: 0, bottom: innerHeight }, reticleState = '', renderMs = 0;
-  // Arrival: the boot clock drives the scene's timeline (RoadScene.effects) and the title
-  // decode; any wheel, key or press fast-forwards it. Reduced motion starts at the end.
+  // Critical copy stays readable; only the scene has an arrival timeline.
   const BOOT_END = scene.bootEnd, root = document.documentElement, hyperspace = $('hyperspace');
-  let boot = reduced ? BOOT_END : 0, bootRate = 1, titled = reduced;
+  let boot = reduced ? BOOT_END : 0, bootRate = 1;
   scene.boot = boot;
-  if (!reduced && window.RoadFx) {
-    RoadFx.prepare(document.querySelector('#intro .eyebrow'), { delay: 0, stagger: .024, span: .28 });
-    RoadFx.prepare(document.querySelector('#intro h1'), { delay: .12, stagger: .09, span: .38 });
-    RoadFx.prepare(document.querySelector('#intro .intro-copy'), { delay: .55, stagger: .02, span: .24 });
-  } else root.classList.remove('fx-intro');
-  function skipIntro() { if (boot < BOOT_END) { acted = true; bootRate = 7; titled = true; window.RoadFx?.hurry(); } }
+  function skipIntro() { if (boot < BOOT_END) { acted = true; bootRate = 7; window.RoadFx?.hurry(); } }
   // Autoplay: a guided tour that drives to each roadside screen, turns to it, opens it, holds
   // long enough to read, turns back and drives on; it ends facing the last screen. On by
   // default once the arrival has finished (not under reduced motion, not with ?autoplay=0,
   // not if the visitor already acted). Any wheel, key, click, touch or a deliberate mouse
   // movement hands control back; the AUTO button (or Space) toggles it and replays at the end.
   const autoplay = !reduced && new URLSearchParams(location.search).get('autoplay') !== '0';
-  let acted = false, swallowClick = false;
+  let acted = readerSeen, swallowClick = false;
   const tour = { phase: 'idle', clock: 0, t0: 0, dur: 0, index: 0, from: 0, to: 0, yaw0: 0, yaw1: 0, up0: 0, up1: 0, pointer: null };
   const smoother = t => t * t * t * (t * (t * 6 - 15) + 10);
   // Seconds to read a screen: grows with its text, within 5.5–10 s.
@@ -144,13 +139,8 @@
   }
   function wake() { if (!raf && !document.hidden && !reading) raf = requestAnimationFrame(frame); }
   const costs = new Float32Array(240), gaps = new Float32Array(240); let costAt = 0, gapAt = 0, chained = false;
-  // Frame pacing: drawn frames land on a whole number of display refreshes (about
-  // 55–90 fps), so a 165 Hz panel gets evenly spaced frames at 82.5 fps instead of
-  // a GPU running flat out and missing refreshes unevenly.
-  // With no input for a while, only ambient light moves, drawn every ~18 ms (55 fps on
-  // 165 Hz, unchanged on 60 Hz) so the GPU can cool between interactions.
-  // After 30 s without input the ambient animation runs at ~30 fps (battery), until any input.
-  const PACE_MIN = 11.5, PACE_MAX = 20.5, IDLE_MS = 18, DEEP_IDLE_MS = 33, ticks = [];
+  // Interactive rendering targets 60 Hz. Once settled, no RAF loop runs while idle.
+  const PACE_MIN = 16, PACE_MAX = 34, IDLE_MS = 33, ticks = [];
   let refresh = 0, pace = 1, lastTick = 0, tickCount = 0, paceAt = 0, lateAvg = 1, inputAt = 0;
   // Callbacks arrive once per display refresh; a low percentile of their spacing is the
   // refresh interval even while some frames run long. Re-checked every 60 callbacks.
@@ -166,7 +156,7 @@
     lastTick = now;
     if (ticks.length >= 24 && (!refresh || ++tickCount % 60 === 0)) estimateRefresh();
     const calm = !auto && now - inputAt > 2500 && Math.abs(camera - target) < .00001 && look === lookTarget && pitch === pitchTarget;
-    const step = refresh ? (calm ? Math.max(pace, Math.round((now - inputAt > 30000 ? DEEP_IDLE_MS : IDLE_MS) / refresh)) : pace) : 1;
+    const step = refresh ? (calm ? Math.max(pace, Math.round(IDLE_MS / refresh)) : pace) : 1;
     if (refresh && last && now - last < refresh * (step - .5)) { raf = requestAnimationFrame(frame); return; }
     const begin = performance.now();
     const interval = last ? now - last : 16, dt = Math.min(45, interval); last = now;
@@ -193,16 +183,18 @@
     if (boot < BOOT_END && (scene.skyReady || now > 1500)) {
       if (!boot) root.classList.add('fx-go'); // the arrival starts: bars fade in now
       boot = Math.min(BOOT_END, boot + dt / 1000 * bootRate);
-      if (!titled) { titled = true; window.RoadFx?.play(); } // the title decodes as the arrival starts
       if (boot >= BOOT_END) { root.classList.remove('fx-intro'); if (autoplay && !acted) startAutoplay(true); }
     }
     const hold = window.__hold; // capture aid only: { boot, time } pins the effect clocks
     if (hold) { if (hold.boot != null) boot = hold.boot; if (hold.time != null) time = hold.time; }
     scene.boot = boot; scene.calm = paused || reduced;
     const changing = Math.abs(camera - target) > .00001 || look !== lookTarget || pitch !== pitchTarget || boot < BOOT_END || scene.warp > 0;
-    if (!paused) time += dt / 1000;
     const settling = monitors.candidate !== monitors.focused || monitors.items.some(m => m.opening > .001 && m.opening < .999);
-    if (dirty || !paused || changing || settling) {
+    const idle = calm && boot >= BOOT_END && !changing && !settling;
+    document.body.classList.toggle('scene-idle', idle || paused);
+    const running = !paused && !idle;
+    if (running) time += dt / 1000;
+    if (dirty || running || changing || settling) {
       scene.lookYaw = look; scene.lookPitch = pitch;
       const t0 = performance.now();
       scene.render(camera, time);
@@ -219,7 +211,7 @@
         }
       }
     }
-    chained = !paused || changing || settling;
+    chained = running || changing || settling;
     if (chained) wake();
     costs[costAt++ % costs.length] = performance.now() - begin;
   }
@@ -278,7 +270,7 @@
   for (const type of ['wheel', 'keydown', 'pointerdown']) window.addEventListener(type, skipIntro, { passive: true });
   // Any input ends calm pacing at once.
   for (const type of ['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown'])
-    window.addEventListener(type, () => { inputAt = performance.now(); }, { passive: true, capture: true });
+    window.addEventListener(type, () => { inputAt = performance.now(); document.body.classList.remove('scene-idle'); }, { passive: true, capture: true });
   window.addEventListener('pointermove', event => {
     if (reading) return;
     if (event.pointerType === 'touch') {
@@ -356,8 +348,8 @@
     target = clamp(scrollY / maxScroll()); dirty = true; wake();
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
-    else { last = 0; dirty = true; wake(); }
+    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; scene.suspend(); }
+    else if (!reading) { scene.resume(); monitors.measure(); measureBand(); measureScroll(); last = 0; dirty = true; wake(); }
   });
   reducedQuery.addEventListener('change', event => {
     reduced = event.matches; paused = reduced; stopAuto(); measureScroll(); dirty = true;
@@ -368,10 +360,11 @@
     pausedBeforeReading = paused; reading = true;
     takeOver(); paused = true; pendingFocus = -1;
     boot = BOOT_END; root.classList.remove('fx-intro'); window.RoadFx?.hurry();
-    cancelAnimationFrame(raf); raf = 0; controls();
+    cancelAnimationFrame(raf); raf = 0; scene.suspend(); controls();
   });
   document.addEventListener('research:close', () => {
     reading = false; paused = pausedBeforeReading || reducedQuery.matches;
+    if (!document.hidden) { scene.resume(); monitors.measure(); measureBand(); measureScroll(); }
     controls(); last = 0; dirty = true; wake();
   });
   scene.onready = () => { dirty = true; wake(); };
@@ -386,8 +379,28 @@
     costs: Array.from(costs.slice(0, Math.min(costAt, costs.length))), dpr: scene.dpr, refresh, pace,
     gaps: Array.from(gaps.slice(0, Math.min(gapAt, gaps.length))), renders: window.__roadRenderCount || 0,
     skyPaints: scene.skyPaints, skyReady: scene.skyReady, skyLayout: scene.skyLayout, monitors: monitors.snapshot(),
+    resources: { ...scene.sky.resources(), roadPixels: scene.canvas.width * scene.canvas.height,
+      skyPixels: scene.sky.canvas.width * scene.sky.canvas.height },
     roadPoint: scene.projectWorld(scene.center(90), 0, 90) });
   window.__skySample = (axis, at) => scene.sky.sample(axis, at);
   measureBand(); measureScroll();
   target = clamp(scrollY / maxScroll()); controls(); wake();
+  }
+  // Two paints let the title and research control appear before allocating the scene.
+  // Direct research links allocate no Canvas/WebGL resources until the reader closes.
+  let started = false, readerSeen = false;
+  function startWhenVisible(event) {
+    if (started || document.hidden || document.getElementById('researchDialog')?.open) return;
+    if (event?.type === 'pointerdown' && event.target.closest?.('[data-open-paper]')) return;
+    started = true;
+    window.removeEventListener('pointerdown', startWhenVisible, true);
+    window.removeEventListener('keydown', startWhenVisible, true);
+    startJourney(readerSeen);
+  }
+  document.addEventListener('research:open', () => { readerSeen = true; });
+  document.addEventListener('research:close', startWhenVisible);
+  document.addEventListener('visibilitychange', startWhenVisible);
+  window.addEventListener('pointerdown', startWhenVisible, { capture: true });
+  window.addEventListener('keydown', startWhenVisible, { capture: true });
+  requestAnimationFrame(() => requestAnimationFrame(startWhenVisible));
 })();

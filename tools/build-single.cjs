@@ -12,7 +12,10 @@ html = html.replace(/<script src="([^"]+)"( defer)?><\/script>/g, (m, src) => {
   const code = read(src);
   if (/<\/script/i.test(code)) throw new Error(`${src} contains </script`);
   scripts++;
-  return `<script>/* ${src} */\n${code}\n</script>`;
+  const panorama = src.startsWith('assets/sky-panorama.js')
+    ? `window.SPACE_PANORAMA=${JSON.stringify('data:image/webp;base64,' + fs.readFileSync(path.join(site, 'assets/space-panorama-2048.webp')).toString('base64'))};\n`
+    : '';
+  return `<script>/* ${src} */\n${panorama}${code}\n</script>`;
 });
 if (/href="assets\/|src="assets\//.test(html)) throw new Error('a reference to assets/ is left');
 fs.writeFileSync(out, html);

@@ -10,7 +10,7 @@
    No external libraries, requests, inference, or API credentials. */
 (() => {
   'use strict';
-  const TAU = Math.PI * 2, NEAR = .8, NO_SKIP = new Set(), BUDGET = 2.2e6;
+  const TAU = Math.PI * 2, NEAR = .8, NO_SKIP = new Set(), BUDGET = 1.5e6, SKY_BUDGET = .65e6;
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const smooth = (a, b, n) => { const t = clamp((n - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
   // Arrival timeline (seconds): out of hyperspace, then a power front lights the road from near to far.
@@ -39,7 +39,7 @@
     const key = rgb + core;
     if (!SPRITES.has(key)) {
       const cv = document.createElement('canvas'); cv.width = cv.height = 64;
-      const g = cv.getContext('2d'), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      const g = cv.getContext('2d', { willReadFrequently: true }), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
       rg.addColorStop(0, `rgba(${rgb},1)`); if (core) rg.addColorStop(.1, `rgba(${rgb},.4)`); rg.addColorStop(1, `rgba(${rgb},0)`);
       g.fillStyle = rg; g.fillRect(0, 0, 64, 64); SPRITES.set(key, cv);
     }
@@ -50,7 +50,9 @@
   class RoadScene {
     constructor(canvas, skyCanvas) {
       this.canvas = canvas;
-      this.ctx = canvas.getContext('2d');
+      // Software backing keeps the capped 2D surfaces out of the GPU path cache.
+      // Profiling this workload showed lower VRAM and lower submission cost than GPU Canvas2D.
+      this.ctx = canvas.getContext('2d', { willReadFrequently: true });
       window.__roadSkyReady = false;
       this.sky = new SkyPanorama(skyCanvas);
       this.sky.onready = () => { window.__roadSkyReady = true; this.onready?.(); };
@@ -64,9 +66,9 @@
       this.boot = BOOT_END; this.bootEnd = BOOT_END; this.calm = false;
       this.warp = 0; this.speedWarp = 0; this.warpDir = 1; this.reach = 250; this.skyBright = 1; this.far = 1; this.foeX = 0;
       // Sorted by colour so each run shares one fill style.
-      this.points = Array.from({ length: 1650 }, () => ({ x: (random() * 2 - 1) * 8.1, z: random() * 262, r: .012 + random() * .028, light: random() }))
+      this.points = Array.from({ length: 1000 }, () => ({ x: (random() * 2 - 1) * 8.1, z: random() * 262, r: .012 + random() * .028, light: random() }))
         .sort((a, b) => (a.light > .84) - (b.light > .84));
-      this.dust = Array.from({ length: 420 }, () => ({ x: (random() * 2 - 1) * 34, y: -5 + random() * 18, z: random() * 200, r: random(), drift: random() * TAU }));
+      this.dust = Array.from({ length: 240 }, () => ({ x: (random() * 2 - 1) * 34, y: -5 + random() * 18, z: random() * 200, r: random(), drift: random() * TAU }));
       this.pylons = [];
       for (let z = -70; z < 540; z += 24 + random() * 22) {
         this.pylons.push({ z, side: random() > .5 ? 1 : -1, off: 44 + random() * 120, height: 18 + random() * 62, width: 2.6 + random() * 4.2,
@@ -89,14 +91,14 @@
       this.resize();
     }
     resize() {
+      if (this.suspended) return;
       this.w = window.innerWidth; this.h = window.innerHeight;
       this.mobile = this.w < 761;
-      this.maxScale = Math.min(window.devicePixelRatio || 1, 1.5);
+      this.maxScale = Math.min(window.devicePixelRatio || 1, 1);
       this.budget = BUDGET; this.probe = null; this.locked = false;
       this.applyScale();
       this.shortView = this.w > this.h && this.h < 550;
       this.baseFocal = this.focal = Math.min(this.w * 1.1, this.h * .94);
-      this.sky.pxPerRad = Math.min(this.dpr, 1) * .85 * this.baseFocal; // sizes the panorama texture
       this.baseHorizon = this.h * (this.shortView ? .75 : this.mobile ? .51 : .47);
       this.vanX = this.w * .5;
       this.aimX = this.w / 2; this.aimY = this.h / 2;
@@ -105,12 +107,15 @@
     // Backing-store scale from the pixel budget, never above the screen's own ratio.
     // The sky holds only soft nebulae, so it renders at a lower scale still.
     applyScale() {
-      const scale = Math.round(Math.sqrt(this.budget / (this.w * this.h)) * 20) / 20;
-      this.dpr = clamp(scale, .75, this.maxScale);
+      const scale = Math.floor(Math.sqrt(this.budget / (this.w * this.h)) * 20) / 20;
+      // A fixed .75 DPR floor would exceed the pixel budget on a 4K screen.
+      this.dpr = Math.min(Math.max(.05, scale), this.maxScale);
       this.hair = .98 / this.dpr; // one device pixel: Canvas 2D's fast hairline path
-      this.canvas.width = Math.round(this.w * this.dpr); this.canvas.height = Math.round(this.h * this.dpr);
+      const width = Math.round(this.w * this.dpr), height = Math.round(this.h * this.dpr);
+      if (this.canvas.width !== width) this.canvas.width = width;
+      if (this.canvas.height !== height) this.canvas.height = height;
       this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      this.sky.resize(this.w, this.h, Math.min(this.dpr, 1) * .85);
+      this.sky.resize(this.w, this.h, Math.min(.65, Math.sqrt(SKY_BUDGET / (this.w * this.h))));
     }
     // Fed with every drawn-frame interval and its budget. Sustained long frames try a smaller
     // backing store; if that does not help, the old size returns and stays.
@@ -121,13 +126,25 @@
         if (this.frameAvg > this.probe.before * .9) { this.budget = this.probe.budget; this.applyScale(); this.locked = true; }
         this.probe = null; this.lastAdapt = now;
       }
-      if (this.probe || now - this.lastAdapt < 1500 || this.frameAvg < budget * 1.3 || this.dpr <= .75) return;
+      if (this.probe || now - this.lastAdapt < 1500 || this.frameAvg < budget * 1.3 || this.dpr <= .4) return;
       this.probe = { at: now, before: this.frameAvg, budget: this.budget };
       this.budget *= .8; this.applyScale();
     }
     get skyPaints() { return this.sky.paints; }
     get skyReady() { return this.sky.ready; }
     get skyLayout() { return this.sky.mode; }
+    suspend() {
+      if (this.suspended) return;
+      this.suspended = true;
+      this.canvas.width = this.canvas.height = 1;
+      this.sky.suspend();
+    }
+    resume() {
+      if (!this.suspended) return;
+      this.suspended = false;
+      this.resize();
+      this.sky.resume();
+    }
     // Road centre line. Consecutive calls often repeat one depth (every point of a gate outline,
     // both ends of a seam), so the last value is kept; along() reads a per-frame table instead.
     center(z) {

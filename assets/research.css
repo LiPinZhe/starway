@@ -10,7 +10,7 @@ body.reading .reticle{opacity:0}
 body.reading .universe *,body.reading .scene-content *{animation-play-state:paused!important}
 #researchDialog{width:min(720px,calc(100% - 32px));max-height:calc(100dvh - 40px);margin:auto;padding:0;border:1px solid #a98a64;background:#0c121b;color:var(--ink);box-shadow:0 30px 100px #000b;overflow:hidden;cursor:auto}
 #researchDialog[open]{display:flex;flex-direction:column}
-#researchDialog::backdrop{background:#02050bd9;backdrop-filter:blur(5px)}
+#researchDialog::backdrop{background:#02050bef;backdrop-filter:none}
 .research-top{flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;border-bottom:1px solid var(--line)}
 .research-top>span{font:12px var(--mono);letter-spacing:.04em;color:#d7b891}
 .research-top button{background:none;border:0;min-height:44px;min-width:68px;padding:8px;color:var(--ink);font-size:14px}
