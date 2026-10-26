@@ -86,6 +86,7 @@ void main(){
       this.last = '';
       this.gl = null; this.mode = 'pending';
       const small = Math.min(innerWidth, innerHeight) < 600 || matchMedia('(pointer: coarse)').matches;
+      this.lowMemory = small;
       this.textureLimit = small ? 1024 : 2048;
       this.spriteLimit = small ? 128 : 256;
       this.starLimit = small ? 1200 : 2400;
@@ -114,8 +115,8 @@ void main(){
     init() {
       if (this.suspended || this.mode !== 'pending') return;
       const canvas = this.canvas;
-      // Loose local files use the 2D path; the self-contained HTML also supports WebGL offline.
-      this.gl = location.protocol === 'file:' && !window.SPACE_PANORAMA ? null : canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
+      // Narrow/touch devices avoid the GPU-context startup cost; loose local files also use 2D.
+      this.gl = this.lowMemory || location.protocol === 'file:' && !window.SPACE_PANORAMA ? null : canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
       this.mode = this.gl && this.initGL() ? 'webgl' : '2d';
       if (this.mode === 'webgl') { this.gl.viewport(0, 0, canvas.width, canvas.height); this.parallel = this.gl.getExtension('KHR_parallel_shader_compile'); }
       else this.ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
@@ -386,6 +387,7 @@ void main(){
     resources() {
       return { textureWidth: this.textureWidth || 0, textureHeight: this.textureHeight || 0,
         textureBytes: this.mode === 'webgl' ? (this.textureWidth || 0) * (this.textureHeight || 0) * 4 : 0,
+        imageBytes: this.image ? this.image.naturalWidth * this.image.naturalHeight * 4 : 0,
         mipmaps: false, stars: this.starLimit, suspended: !!this.suspended,
         spriteBytes: this.bodies.reduce((bytes, b) => bytes + (b.sprite ? b.sprite.width * b.sprite.height * 4 : 0), 0) };
     }
