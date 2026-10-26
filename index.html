@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#05070b">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
+  <meta name="description" content="沿科幻道路了解计算机视觉与玉米表型研究：CornPheno、CornPheno 2.0 与 CornPET++。">
   <title>探索之路 · 个人简历</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305070b'/%3E%3Cpath d='M8 28 15 8h2l7 20' fill='none' stroke='%23e9b47c' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='10' r='2.4' fill='%23ffe1b7'/%3E%3C/svg%3E">
   <link rel="canonical" href="https://lipinzhe.github.io/starway/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="探索之路 · 个人简历">
-  <meta property="og:description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
+  <meta property="og:description" content="CornPheno、CornPheno 2.0 与 CornPET++：从籽粒计数到多果穗、多性状表型分析。">
   <meta property="og:url" content="https://lipinzhe.github.io/starway/">
   <meta property="og:image" content="https://lipinzhe.github.io/starway/previews/social-card.jpg">
   <meta property="og:image:width" content="1200">
@@ -19,6 +19,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="assets/route.css">
   <link rel="stylesheet" href="assets/monitors.css">
+  <link rel="stylesheet" href="assets/research.css">
   <!-- Arrival sequence: hides the title and bars until the intro reveals them (never under reduced motion). -->
   <script>if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("fx-intro");</script>
 </head>
@@ -37,6 +38,7 @@
       <span><strong>你的姓名</strong><small>COMPUTER VISION</small></span>
     </a>
     <nav class="navigation" aria-label="控制">
+      <a class="research-button" id="researchButton" href="#paper-cornpheno2" data-open-paper="cornpheno2">研究成果</a>
       <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="AUTO 自动播放"><span aria-hidden="true">▶</span><b>AUTO</b></button>
     </nav>
   </header>
@@ -52,22 +54,25 @@
         <article class="world-sign" data-sign-index="0" data-side="1" data-station="0" tabindex="0" aria-label="关于我">
           <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>01 / ABOUT</span><span class="beacon" aria-hidden="true"></span></div><h2>从这里认识我</h2><p class="sign-summary">计算机视觉 · 研究与持续探索</p><div class="sign-expand"><p>我关注如何在复杂图像中定位对象、理解结构。农业是目前参与的应用场景之一。</p><dl><div><dt>研究</dt><dd>计算机视觉</dd></div><div><dt>单位</dt><dd class="unfilled">待补充</dd></div></dl></div><span class="sign-action">转动视角查看</span>
         </article>
-        <article class="world-sign" data-sign-index="1" data-side="-1" data-station=".34" tabindex="0" aria-label="CornPheno 公开研究">
+        <article class="world-sign" data-sign-index="1" data-side="-1" data-station=".25" tabindex="0" aria-label="CornPheno 公开研究">
           <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>02 / RESEARCH</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPheno</h2><p class="sign-summary">以点查询定位籽粒，理解空间结构。</p><div class="sign-expand"><p>Phenotyping corn ear kernels in the wild via point query transformer.</p><p class="sign-meta">Plant Phenomics · 2025 · 已发表</p><p>通过点查询定位玉米穗上的籽粒，再由点的空间关系提取行结构。</p><dl><div><dt>我的角色</dt><dd>主导大部分研究工作</dd></div></dl><a href="https://doi.org/10.1016/j.plaphe.2025.100129" target="_blank" rel="noopener noreferrer">阅读公开论文 ↗</a></div><span class="sign-action">转动视角查看</span>
         </article>
-        <article class="world-sign" data-sign-index="2" data-side="1" data-station=".67" tabindex="0" aria-label="正在推进的工作">
-          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>03 / IN PROGRESS</span><span class="beacon" aria-hidden="true"></span></div><h2>下一段探索</h2><p class="sign-summary">CornPheno 2.0 / CornPET · 撰写中</p><div class="sign-expand"><p>正在推进 CornPheno 2.0 与 CornPET 模型升级相关工作。</p><p class="sign-meta">具体结果与公开材料待补充。</p></div><span class="sign-action">转动视角查看</span>
+        <article class="world-sign" data-sign-index="2" data-side="1" data-station=".5" tabindex="0" aria-label="CornPheno 2.0，准备发表">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>03 / PHENOTYPING</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPheno 2.0</h2><p class="sign-summary">多果穗、多性状的原位表型分析。</p><div class="sign-expand"><p class="sign-meta">准备发表</p><p>结合 CornPET++ 与实例分割，同时分析多个果穗，扩展穗长、穗宽和秃尖长度测量。</p><p>通过几何建模估计整穗穗行数，已集成至 OpenPheno。</p><a href="#paper-cornpheno2" data-open-paper="cornpheno2">阅读研究介绍 ↗</a></div><span class="sign-action">转动视角查看</span>
         </article>
-        <article class="world-sign" data-sign-index="3" data-side="-1" data-station="1" tabindex="0" aria-label="联系方式">
-          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>04 / CONTACT</span><span class="beacon" aria-hidden="true"></span></div><h2>保持联系</h2><p class="sign-summary">让研究、合作与交流在这里相遇。</p><div class="sign-expand"><p>联系方式与正式 CV 还没有填入，补充真实信息后即可接入。</p><div class="contact-placeholder"><span>CONTACT</span><strong>联系方式待补充</strong><span aria-hidden="true">↗</span></div></div><span class="sign-action">转动视角查看</span>
+        <article class="world-sign" data-sign-index="3" data-side="-1" data-station=".75" tabindex="0" aria-label="CornPET++，MIDAS 已录用">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>04 / EFFICIENT VISION</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPET++</h2><p class="sign-summary">面向玉米籽粒计数，精简点查询模型。</p><div class="sign-expand"><p class="sign-meta">已录用 · MIDAS<br>IEEE ICDM 2026 Workshop</p><p>通过单查询分支、按查询位置计算编码和简化特征路径，减少模型计算与显存开销。</p><a href="#paper-cornpetpp" data-open-paper="cornpetpp">阅读研究介绍 ↗</a></div><span class="sign-action">转动视角查看</span>
+        </article>
+        <article class="world-sign" data-sign-index="4" data-side="1" data-station="1" tabindex="0" aria-label="联系方式">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>05 / CONTACT</span><span class="beacon" aria-hidden="true"></span></div><h2>保持联系</h2><p class="sign-summary">让研究、合作与交流在这里相遇。</p><div class="sign-expand"><p>联系方式与正式 CV 还没有填入，补充真实信息后即可接入。</p><div class="contact-placeholder"><span>CONTACT</span><strong>联系方式待补充</strong><span aria-hidden="true">↗</span></div></div><span class="sign-action">转动视角查看</span>
         </article>
       </div>
     </div>
 
     <div class="scroll-runway" aria-hidden="true">
-      <span id="identity"></span><span id="research"></span><span id="work"></span><span id="contact"></span>
+      <span id="identity"></span><span id="research"></span><span id="work"></span><span id="cornpet"></span><span id="contact"></span>
     </div>
-    <noscript><div class="no-script"><h1>你的姓名 · 计算机视觉</h1><p>此道路体验需要启用 JavaScript。研究记录：CornPheno，Plant Phenomics，2025。CornPheno 2.0 / CornPET 升级文章撰写中。身份与联系方式待补充。</p><a href="https://doi.org/10.1016/j.plaphe.2025.100129">公开论文</a></div></noscript>
+    <noscript><div class="no-script"><h1>你的姓名 · 计算机视觉</h1><p>研究记录：CornPheno，Plant Phenomics，2025，已发表；CornPheno 2.0，多果穗、多性状原位表型分析，准备发表；CornPET++，面向籽粒计数的高效点查询模型，已获 IEEE ICDM 2026 MIDAS workshop 录用。</p><a href="https://doi.org/10.1016/j.plaphe.2025.100129">CornPheno 公开论文</a><p>启用 JavaScript 可使用道路体验和研究详情。身份与联系方式待补充。</p></div></noscript>
   </main>
 
   <footer class="travel-bar">
@@ -75,17 +80,52 @@
       <div class="route-line" aria-hidden="true"><i id="progressFill"></i></div>
       <button type="button" data-go="0" class="route-stop is-current" aria-current="step" aria-label="前往：关于我" title="关于我"></button>
       <button type="button" data-go="1" class="route-stop" aria-label="前往：CornPheno 研究" title="CornPheno 研究"></button>
-      <button type="button" data-go="2" class="route-stop" aria-label="前往：下一段探索" title="下一段探索"></button>
-      <button type="button" data-go="3" class="route-stop" aria-label="前往：联系方式" title="联系方式"></button>
+      <button type="button" data-go="2" class="route-stop" aria-label="前往：CornPheno 2.0" title="CornPheno 2.0"></button>
+      <button type="button" data-go="3" class="route-stop" aria-label="前往：CornPET++" title="CornPET++"></button>
+      <button type="button" data-go="4" class="route-stop" aria-label="前往：联系方式" title="联系方式"></button>
     </nav>
     <div class="scene-tools"><button id="sceneryButton" type="button" aria-pressed="false" aria-label="隐藏路牌">◌</button><button id="motionButton" type="button" aria-pressed="false" aria-label="暂停动态">Ⅱ</button><span id="progressText">0%</span></div>
   </footer>
+  <dialog id="researchDialog" aria-labelledby="researchHeading">
+    <div class="research-top"><span>RESEARCH / 研究成果</span><button id="closeResearch" type="button" aria-label="关闭研究介绍">关闭 <span aria-hidden="true">×</span></button></div>
+    <nav class="research-tabs" aria-label="选择研究"><button type="button" data-paper-tab="cornpheno" aria-pressed="false">CornPheno</button><button type="button" data-paper-tab="cornpheno2" aria-pressed="false">CornPheno 2.0</button><button type="button" data-paper-tab="cornpetpp" aria-pressed="false">CornPET++</button></nav>
+    <div class="research-scroll">
+      <h2 id="researchHeading" tabindex="-1">研究成果</h2>
+      <article id="paper-cornpheno" data-paper-panel="cornpheno" data-title="CornPheno" hidden>
+        <p class="research-status">已发表 · Plant Phenomics · 2025</p>
+        <h3 lang="en">CornPheno: Phenotyping corn ear kernels in the wild via point query transformer</h3>
+        <p>通过手机图像分析玉米果穗。CornPET 预测可见籽粒中心，UNICORN 根据点的空间关系识别穗行，获得籽粒数、行结构与每行籽粒数。</p>
+        <p>这项工作构成了后续 CornPET++ 模型优化和 CornPheno 2.0 多果穗、多性状分析的基础。</p>
+        <a class="research-link" href="https://doi.org/10.1016/j.plaphe.2025.100129" target="_blank" rel="noopener noreferrer">阅读公开论文 ↗</a>
+      </article>
+      <article id="paper-cornpheno2" data-paper-panel="cornpheno2" data-title="CornPheno 2.0" hidden>
+        <p class="research-status">准备发表</p>
+        <h3 lang="en">CornPheno 2.0: From Single-Face, Single-Ear Kernel Counting to Whole-Ear, Multi-Ear In-Situ Phenotyping</h3>
+        <p class="research-lead">将单果穗、单面籽粒计数扩展到多果穗、多性状的原位表型分析。</p>
+        <p>结合 CornPET++ 与 YOLO 实例分割，在同一张图像中分离多个果穗，再进行籽粒定位与逐穗分析。新增穗长、穗宽和秃尖长度测量，并利用已知尺寸的参照物完成物理尺度换算。</p>
+        <p>通过几何建模估计整穗穗行数，同时扩充不规则果穗等复杂样本。完整流程已集成至 OpenPheno 微信小程序。</p>
+        <dl class="research-facts"><div><dt>研究重点</dt><dd>多果穗处理、形态测量与穗行估计</dd></div><div><dt>与 CornPET++ 的关系</dt><dd>将高效计数模型整合进完整表型流程</dd></div></dl>
+        <p class="research-note">公开论文链接将在发布后补充。</p>
+      </article>
+      <article id="paper-cornpetpp" data-paper-panel="cornpetpp" data-title="CornPET++" hidden>
+        <p class="research-status">已录用 · MIDAS · IEEE ICDM 2026 Workshop</p>
+        <h3 lang="en">Corn Ears Are Not Crowds: CornPET++ for Streamlined Corn Kernel Counting</h3>
+        <p class="research-lead">围绕玉米籽粒的尺度和空间结构，重新组织从人群计数迁移而来的点查询模型。</p>
+        <p>通过单查询分支、仅在查询位置计算位置编码、简化特征与上下文处理路径，并结合混合精度执行，降低模型计算和显存开销。研究比较了 16 种逐步精简的配置。</p>
+        <dl class="research-facts"><div><dt>参数量</dt><dd>约为 CornPET 基线的 10.9%</dd></div><div><dt>计算量</dt><dd>约为基线的 9.6%</dd></div><div><dt>峰值分配显存</dt><dd>平均约为基线的 8.8%</dd></div></dl>
+        <p class="research-note">结果来自稿件中的模型对比：计算量为估算 FLOPs，显存在 RTX 3090 上测量；这些指标描述模型开销，不代表整套应用的端到端速度。</p>
+        <p class="research-note" lang="en">MIDAS: Multimodal Data Mining for Sustainable Agriculture.</p>
+        <p class="research-note">公开论文链接将在发布后补充。</p>
+      </article>
+    </div>
+  </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="assets/space-panorama-data.js"></script>
   <script src="assets/sky-panorama.js"></script>
   <script src="assets/road-scene.js"></script>
   <script src="assets/effects.js"></script>
   <script src="assets/monitors.js"></script>
-  <script src="assets/journey.js"></script>
+  <script src="assets/journey.js?v=20261026-research"></script>
+  <script src="assets/research.js"></script>
 </body>
 </html>

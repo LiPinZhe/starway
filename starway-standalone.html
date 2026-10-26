@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#05070b">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
+  <meta name="description" content="沿科幻道路了解计算机视觉与玉米表型研究：CornPheno、CornPheno 2.0 与 CornPET++。">
   <title>探索之路 · 个人简历</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305070b'/%3E%3Cpath d='M8 28 15 8h2l7 20' fill='none' stroke='%23e9b47c' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='10' r='2.4' fill='%23ffe1b7'/%3E%3C/svg%3E">
   <link rel="canonical" href="https://lipinzhe.github.io/starway/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="探索之路 · 个人简历">
-  <meta property="og:description" content="沿一条光与粒子构成的道路，探索计算机视觉研究。">
+  <meta property="og:description" content="CornPheno、CornPheno 2.0 与 CornPET++：从籽粒计数到多果穗、多性状表型分析。">
   <meta property="og:url" content="https://lipinzhe.github.io/starway/">
   <meta property="og:image" content="https://lipinzhe.github.io/starway/previews/social-card.jpg">
   <meta property="og:image:width" content="1200">
@@ -358,6 +358,58 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.hyperspace{display:none}}
 
 </style>
+  <style>
+/* Research uses the existing warm, dark palette in a stable reading surface. */
+.navigation{gap:12px}
+.navigation .research-button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 13px;border:1px solid var(--line);color:var(--gold-light);font-size:14px;text-decoration:none;white-space:nowrap}
+.research-button:hover{background:#e9b47c12;border-color:var(--gold)}
+.route-map{width:208px}
+/* Five equally spaced stations: positions are also refreshed from data-station by JS. */
+#research{top:20.967742%}#work{top:41.935484%}#cornpet{top:62.903226%}#contact{top:83.870968%}
+body.reading{overflow:hidden}
+body.reading .reticle{opacity:0}
+body.reading .universe *,body.reading .scene-content *{animation-play-state:paused!important}
+#researchDialog{width:min(720px,calc(100% - 32px));max-height:calc(100dvh - 40px);margin:auto;padding:0;border:1px solid #a98a64;background:#0c121b;color:var(--ink);box-shadow:0 30px 100px #000b;overflow:hidden;cursor:auto}
+#researchDialog[open]{display:flex;flex-direction:column}
+#researchDialog::backdrop{background:#02050bd9;backdrop-filter:blur(5px)}
+.research-top{flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;border-bottom:1px solid var(--line)}
+.research-top>span{font:12px var(--mono);letter-spacing:.04em;color:#d7b891}
+.research-top button{background:none;border:0;min-height:44px;min-width:68px;padding:8px;color:var(--ink);font-size:14px}
+.research-top button span{font-size:24px;vertical-align:-2px;margin-left:8px}
+.research-tabs{display:flex;flex-wrap:wrap;gap:4px;flex:none;padding:10px 24px;border-bottom:1px solid var(--line)}
+.research-tabs button{min-height:44px;padding:8px 12px;border:1px solid transparent;background:none;font-size:14px;color:#c6ccd2;white-space:nowrap}
+.research-tabs button[aria-pressed="true"]{border-color:#b69467;background:#e9b47c12;color:var(--gold-light)}
+.research-scroll{overflow:auto;overscroll-behavior:contain;padding:26px 32px 32px;scrollbar-width:thin}
+#researchHeading{font-size:28px;font-weight:500;line-height:1.3;margin:0 0 12px}
+.research-scroll h3{font-size:18px;line-height:1.55;font-weight:500;margin:18px 0 24px;overflow-wrap:anywhere;color:#e7e9ed}
+.research-scroll p{font-size:16px;line-height:1.85;margin:16px 0;color:#d2d8de}
+.research-scroll .research-lead{font-size:18px;color:#f0e8db}
+.research-scroll .research-status{font-size:13px;line-height:1.7;margin:0;color:#e9c392}
+.research-scroll .research-note{font-size:14px;line-height:1.8;color:#b8c2cc}
+.research-facts{margin:24px 0;border-top:1px solid var(--line);font-size:15px;line-height:1.7}
+.research-facts>div{display:grid;grid-template-columns:minmax(100px,1fr) 2fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.research-facts dt{color:#b8c2cc}.research-facts dd{margin:0}
+.research-link{display:inline-flex;align-items:center;min-height:44px;padding:8px 0;color:var(--gold-light);text-underline-offset:5px}
+@media(max-width:760px){
+  .navigation{gap:8px}.navigation .research-button{padding:8px 10px;font-size:13px}
+  .route-map{width:184px}
+  #researchDialog{width:calc(100% - 20px);max-height:calc(100dvh - 20px)}
+  .research-top{padding:8px 16px}.research-top>span{font-size:11px}
+  .research-tabs{padding:8px 10px;gap:2px}.research-tabs button{font-size:12px;padding:8px}
+  .research-scroll{padding:22px 20px 28px}#researchHeading{font-size:26px}
+  .research-scroll h3{font-size:17px}.research-scroll .research-lead{font-size:17px}
+  .research-facts>div{grid-template-columns:1fr;gap:2px}
+}
+@media(prefers-reduced-motion:reduce){#research{top:19.565217%}#work{top:39.130435%}#cornpet{top:58.695652%}#contact{top:78.26087%}}
+@media print{
+  body.reading>*:not(#researchDialog){display:none!important}
+  body.reading #researchDialog{position:static;width:auto;max-height:none;border:0;color:#111;background:white;box-shadow:none}
+  body.reading .research-top,body.reading .research-tabs{display:none}
+  body.reading .research-scroll{overflow:visible;padding:0}
+  body.reading .research-scroll :is(p,h3,dt,dd,a){color:#111}
+}
+
+</style>
   <!-- Arrival sequence: hides the title and bars until the intro reveals them (never under reduced motion). -->
   <script>if (!matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("fx-intro");</script>
 </head>
@@ -376,6 +428,7 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
       <span><strong>你的姓名</strong><small>COMPUTER VISION</small></span>
     </a>
     <nav class="navigation" aria-label="控制">
+      <a class="research-button" id="researchButton" href="#paper-cornpheno2" data-open-paper="cornpheno2">研究成果</a>
       <button class="auto-button" id="autoButton" type="button" aria-pressed="false" aria-label="AUTO 自动播放"><span aria-hidden="true">▶</span><b>AUTO</b></button>
     </nav>
   </header>
@@ -391,22 +444,25 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
         <article class="world-sign" data-sign-index="0" data-side="1" data-station="0" tabindex="0" aria-label="关于我">
           <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>01 / ABOUT</span><span class="beacon" aria-hidden="true"></span></div><h2>从这里认识我</h2><p class="sign-summary">计算机视觉 · 研究与持续探索</p><div class="sign-expand"><p>我关注如何在复杂图像中定位对象、理解结构。农业是目前参与的应用场景之一。</p><dl><div><dt>研究</dt><dd>计算机视觉</dd></div><div><dt>单位</dt><dd class="unfilled">待补充</dd></div></dl></div><span class="sign-action">转动视角查看</span>
         </article>
-        <article class="world-sign" data-sign-index="1" data-side="-1" data-station=".34" tabindex="0" aria-label="CornPheno 公开研究">
+        <article class="world-sign" data-sign-index="1" data-side="-1" data-station=".25" tabindex="0" aria-label="CornPheno 公开研究">
           <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>02 / RESEARCH</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPheno</h2><p class="sign-summary">以点查询定位籽粒，理解空间结构。</p><div class="sign-expand"><p>Phenotyping corn ear kernels in the wild via point query transformer.</p><p class="sign-meta">Plant Phenomics · 2025 · 已发表</p><p>通过点查询定位玉米穗上的籽粒，再由点的空间关系提取行结构。</p><dl><div><dt>我的角色</dt><dd>主导大部分研究工作</dd></div></dl><a href="https://doi.org/10.1016/j.plaphe.2025.100129" target="_blank" rel="noopener noreferrer">阅读公开论文 ↗</a></div><span class="sign-action">转动视角查看</span>
         </article>
-        <article class="world-sign" data-sign-index="2" data-side="1" data-station=".67" tabindex="0" aria-label="正在推进的工作">
-          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>03 / IN PROGRESS</span><span class="beacon" aria-hidden="true"></span></div><h2>下一段探索</h2><p class="sign-summary">CornPheno 2.0 / CornPET · 撰写中</p><div class="sign-expand"><p>正在推进 CornPheno 2.0 与 CornPET 模型升级相关工作。</p><p class="sign-meta">具体结果与公开材料待补充。</p></div><span class="sign-action">转动视角查看</span>
+        <article class="world-sign" data-sign-index="2" data-side="1" data-station=".5" tabindex="0" aria-label="CornPheno 2.0，准备发表">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>03 / PHENOTYPING</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPheno 2.0</h2><p class="sign-summary">多果穗、多性状的原位表型分析。</p><div class="sign-expand"><p class="sign-meta">准备发表</p><p>结合 CornPET++ 与实例分割，同时分析多个果穗，扩展穗长、穗宽和秃尖长度测量。</p><p>通过几何建模估计整穗穗行数，已集成至 OpenPheno。</p><a href="#paper-cornpheno2" data-open-paper="cornpheno2">阅读研究介绍 ↗</a></div><span class="sign-action">转动视角查看</span>
         </article>
-        <article class="world-sign" data-sign-index="3" data-side="-1" data-station="1" tabindex="0" aria-label="联系方式">
-          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>04 / CONTACT</span><span class="beacon" aria-hidden="true"></span></div><h2>保持联系</h2><p class="sign-summary">让研究、合作与交流在这里相遇。</p><div class="sign-expand"><p>联系方式与正式 CV 还没有填入，补充真实信息后即可接入。</p><div class="contact-placeholder"><span>CONTACT</span><strong>联系方式待补充</strong><span aria-hidden="true">↗</span></div></div><span class="sign-action">转动视角查看</span>
+        <article class="world-sign" data-sign-index="3" data-side="-1" data-station=".75" tabindex="0" aria-label="CornPET++，MIDAS 已录用">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>04 / EFFICIENT VISION</span><span class="beacon" aria-hidden="true"></span></div><h2>CornPET++</h2><p class="sign-summary">面向玉米籽粒计数，精简点查询模型。</p><div class="sign-expand"><p class="sign-meta">已录用 · MIDAS<br>IEEE ICDM 2026 Workshop</p><p>通过单查询分支、按查询位置计算编码和简化特征路径，减少模型计算与显存开销。</p><a href="#paper-cornpetpp" data-open-paper="cornpetpp">阅读研究介绍 ↗</a></div><span class="sign-action">转动视角查看</span>
+        </article>
+        <article class="world-sign" data-sign-index="4" data-side="1" data-station="1" tabindex="0" aria-label="联系方式">
+          <span class="sign-post" aria-hidden="true"></span><div class="sign-head"><span>05 / CONTACT</span><span class="beacon" aria-hidden="true"></span></div><h2>保持联系</h2><p class="sign-summary">让研究、合作与交流在这里相遇。</p><div class="sign-expand"><p>联系方式与正式 CV 还没有填入，补充真实信息后即可接入。</p><div class="contact-placeholder"><span>CONTACT</span><strong>联系方式待补充</strong><span aria-hidden="true">↗</span></div></div><span class="sign-action">转动视角查看</span>
         </article>
       </div>
     </div>
 
     <div class="scroll-runway" aria-hidden="true">
-      <span id="identity"></span><span id="research"></span><span id="work"></span><span id="contact"></span>
+      <span id="identity"></span><span id="research"></span><span id="work"></span><span id="cornpet"></span><span id="contact"></span>
     </div>
-    <noscript><div class="no-script"><h1>你的姓名 · 计算机视觉</h1><p>此道路体验需要启用 JavaScript。研究记录：CornPheno，Plant Phenomics，2025。CornPheno 2.0 / CornPET 升级文章撰写中。身份与联系方式待补充。</p><a href="https://doi.org/10.1016/j.plaphe.2025.100129">公开论文</a></div></noscript>
+    <noscript><div class="no-script"><h1>你的姓名 · 计算机视觉</h1><p>研究记录：CornPheno，Plant Phenomics，2025，已发表；CornPheno 2.0，多果穗、多性状原位表型分析，准备发表；CornPET++，面向籽粒计数的高效点查询模型，已获 IEEE ICDM 2026 MIDAS workshop 录用。</p><a href="https://doi.org/10.1016/j.plaphe.2025.100129">CornPheno 公开论文</a><p>启用 JavaScript 可使用道路体验和研究详情。身份与联系方式待补充。</p></div></noscript>
   </main>
 
   <footer class="travel-bar">
@@ -414,11 +470,45 @@ body.aim-mode .world-sign.is-visible{pointer-events:none}
       <div class="route-line" aria-hidden="true"><i id="progressFill"></i></div>
       <button type="button" data-go="0" class="route-stop is-current" aria-current="step" aria-label="前往：关于我" title="关于我"></button>
       <button type="button" data-go="1" class="route-stop" aria-label="前往：CornPheno 研究" title="CornPheno 研究"></button>
-      <button type="button" data-go="2" class="route-stop" aria-label="前往：下一段探索" title="下一段探索"></button>
-      <button type="button" data-go="3" class="route-stop" aria-label="前往：联系方式" title="联系方式"></button>
+      <button type="button" data-go="2" class="route-stop" aria-label="前往：CornPheno 2.0" title="CornPheno 2.0"></button>
+      <button type="button" data-go="3" class="route-stop" aria-label="前往：CornPET++" title="CornPET++"></button>
+      <button type="button" data-go="4" class="route-stop" aria-label="前往：联系方式" title="联系方式"></button>
     </nav>
     <div class="scene-tools"><button id="sceneryButton" type="button" aria-pressed="false" aria-label="隐藏路牌">◌</button><button id="motionButton" type="button" aria-pressed="false" aria-label="暂停动态">Ⅱ</button><span id="progressText">0%</span></div>
   </footer>
+  <dialog id="researchDialog" aria-labelledby="researchHeading">
+    <div class="research-top"><span>RESEARCH / 研究成果</span><button id="closeResearch" type="button" aria-label="关闭研究介绍">关闭 <span aria-hidden="true">×</span></button></div>
+    <nav class="research-tabs" aria-label="选择研究"><button type="button" data-paper-tab="cornpheno" aria-pressed="false">CornPheno</button><button type="button" data-paper-tab="cornpheno2" aria-pressed="false">CornPheno 2.0</button><button type="button" data-paper-tab="cornpetpp" aria-pressed="false">CornPET++</button></nav>
+    <div class="research-scroll">
+      <h2 id="researchHeading" tabindex="-1">研究成果</h2>
+      <article id="paper-cornpheno" data-paper-panel="cornpheno" data-title="CornPheno" hidden>
+        <p class="research-status">已发表 · Plant Phenomics · 2025</p>
+        <h3 lang="en">CornPheno: Phenotyping corn ear kernels in the wild via point query transformer</h3>
+        <p>通过手机图像分析玉米果穗。CornPET 预测可见籽粒中心，UNICORN 根据点的空间关系识别穗行，获得籽粒数、行结构与每行籽粒数。</p>
+        <p>这项工作构成了后续 CornPET++ 模型优化和 CornPheno 2.0 多果穗、多性状分析的基础。</p>
+        <a class="research-link" href="https://doi.org/10.1016/j.plaphe.2025.100129" target="_blank" rel="noopener noreferrer">阅读公开论文 ↗</a>
+      </article>
+      <article id="paper-cornpheno2" data-paper-panel="cornpheno2" data-title="CornPheno 2.0" hidden>
+        <p class="research-status">准备发表</p>
+        <h3 lang="en">CornPheno 2.0: From Single-Face, Single-Ear Kernel Counting to Whole-Ear, Multi-Ear In-Situ Phenotyping</h3>
+        <p class="research-lead">将单果穗、单面籽粒计数扩展到多果穗、多性状的原位表型分析。</p>
+        <p>结合 CornPET++ 与 YOLO 实例分割，在同一张图像中分离多个果穗，再进行籽粒定位与逐穗分析。新增穗长、穗宽和秃尖长度测量，并利用已知尺寸的参照物完成物理尺度换算。</p>
+        <p>通过几何建模估计整穗穗行数，同时扩充不规则果穗等复杂样本。完整流程已集成至 OpenPheno 微信小程序。</p>
+        <dl class="research-facts"><div><dt>研究重点</dt><dd>多果穗处理、形态测量与穗行估计</dd></div><div><dt>与 CornPET++ 的关系</dt><dd>将高效计数模型整合进完整表型流程</dd></div></dl>
+        <p class="research-note">公开论文链接将在发布后补充。</p>
+      </article>
+      <article id="paper-cornpetpp" data-paper-panel="cornpetpp" data-title="CornPET++" hidden>
+        <p class="research-status">已录用 · MIDAS · IEEE ICDM 2026 Workshop</p>
+        <h3 lang="en">Corn Ears Are Not Crowds: CornPET++ for Streamlined Corn Kernel Counting</h3>
+        <p class="research-lead">围绕玉米籽粒的尺度和空间结构，重新组织从人群计数迁移而来的点查询模型。</p>
+        <p>通过单查询分支、仅在查询位置计算位置编码、简化特征与上下文处理路径，并结合混合精度执行，降低模型计算和显存开销。研究比较了 16 种逐步精简的配置。</p>
+        <dl class="research-facts"><div><dt>参数量</dt><dd>约为 CornPET 基线的 10.9%</dd></div><div><dt>计算量</dt><dd>约为基线的 9.6%</dd></div><div><dt>峰值分配显存</dt><dd>平均约为基线的 8.8%</dd></div></dl>
+        <p class="research-note">结果来自稿件中的模型对比：计算量为估算 FLOPs，显存在 RTX 3090 上测量；这些指标描述模型开销，不代表整套应用的端到端速度。</p>
+        <p class="research-note" lang="en">MIDAS: Multimodal Data Mining for Sustainable Agriculture.</p>
+        <p class="research-note">公开论文链接将在发布后补充。</p>
+      </article>
+    </div>
+  </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script>/* assets/space-panorama-data.js */
 /* Generated by work/road-design/panorama/bake.cjs — procedural panorama, no external source. */
@@ -1712,7 +1802,7 @@ void main(){
 })();
 
 </script>
-  <script>/* assets/journey.js */
+  <script>/* assets/journey.js?v=20261026-research */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -1723,13 +1813,20 @@ void main(){
   const dots = [...document.querySelectorAll('.route-stop')];
   // The scroll range only changes on resize; reading scrollHeight per event could force layout.
   let scrollRange = 1;
-  const measureScroll = () => { scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight); };
+  const measureScroll = () => {
+    scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    document.querySelectorAll('.scroll-runway > span').forEach((anchor, index) => {
+      const item = monitors.items[index];
+      if (item) anchor.style.top = `${item.station * scrollRange}px`;
+    });
+  };
   const maxScroll = () => scrollRange;
   const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
   // Look limits in radians: yaw either way, pitch up / down.
   const maxLook = 1.1, maxUp = .42, maxDown = .3;
   let target = 0, camera = 0, lookTarget = 0, look = 0, pitchTarget = 0, pitch = 0;
   let paused = reducedQuery.matches, reduced = reducedQuery.matches;
+  let reading = false, pausedBeforeReading = paused, pendingFocus = -1;
   let auto = false, autoTop = 0, scenery = false, raf = 0, last = 0, time = 0, dirty = true;
   let touch = null, aiming = false, overControls = false, band = { top: 0, bottom: innerHeight }, reticleState = '', renderMs = 0;
   // Arrival: the boot clock drives the scene's timeline (RoadScene.effects) and the title
@@ -1822,7 +1919,9 @@ void main(){
   // Last values written to the DOM, so a frame only touches what actually changed.
   const shown = { fill: '', text: '', current: -1, intro: -1, hyper: '', hyperVis: 'hidden' };
   function ui() {
-    const fill = `scaleX(${target.toFixed(3)})`, text = `${Math.round(target * 100)}%`, current = Math.round(target * 3);
+    const fill = `scaleX(${target.toFixed(3)})`, text = `${Math.round(target * 100)}%`;
+    const current = monitors.items.reduce((nearest, item, index, items) =>
+      Math.abs(item.station - target) < Math.abs(items[nearest].station - target) ? index : nearest, 0);
     if (fill !== shown.fill) $('progressFill').style.transform = shown.fill = fill;
     if (text !== shown.text) $('progressText').textContent = shown.text = text;
     if (current !== shown.current) {
@@ -1848,7 +1947,7 @@ void main(){
     const state = overControls ? 'idle' : monitors.aim;
     if (state !== reticleState) { reticle.dataset.state = reticleState = state; }
   }
-  function wake() { if (!raf && !document.hidden) raf = requestAnimationFrame(frame); }
+  function wake() { if (!raf && !document.hidden && !reading) raf = requestAnimationFrame(frame); }
   const costs = new Float32Array(240), gaps = new Float32Array(240); let costAt = 0, gapAt = 0, chained = false;
   // Frame pacing: drawn frames land on a whole number of display refreshes (about
   // 55–90 fps), so a 165 Hz panel gets evenly spaced frames at 82.5 fps instead of
@@ -1917,6 +2016,13 @@ void main(){
       monitors.drawStands();
       renderMs += (performance.now() - t0 - renderMs) * .1;
       ui(); dirty = false;
+      if (pendingFocus >= 0) {
+        const item = monitors.items[pendingFocus];
+        if (Math.abs(camera - item.station) < .001 && item.visible && item.opening > .95) {
+          pendingFocus = -1;
+          item.element.focus({ preventScroll: true });
+        }
+      }
     }
     chained = !paused || changing || settling;
     if (chained) wake();
@@ -1927,10 +2033,20 @@ void main(){
     if (tour.phase !== 'idle' && monitors.keyboard === tour.index && document.activeElement !== monitors.items[tour.index].element) monitors.keyboard = -1;
     tour.phase = 'idle'; auto = false; controls();
   }
-  function go(index) {
+  function go(index, focus = true) {
     acted = true; stopAuto();
-    const station = monitors.items[clamp(Number(index), 0, 3)].station;
-    window.scrollTo({ top: station * maxScroll(), behavior: reduced ? 'instant' : 'smooth' });
+    const item = monitors.items[clamp(Math.round(Number(index)), 0, monitors.items.length - 1)];
+    if (!item) return;
+    boot = BOOT_END; root.classList.remove('fx-intro'); window.RoadFx?.hurry();
+    const z = item.station * scene.routeLength, x = scene.center(z);
+    const heading = Math.atan2(scene.center(z + 28) - x, 28);
+    const dx = item.anchor.x - x, dz = item.anchor.z - z;
+    const up = Math.atan2(monitors.openMiddle(item) - 3.6, Math.hypot(dx, dz)) - Math.atan((scene.baseHorizon - scene.aimY) / scene.baseFocal);
+    target = item.station;
+    monitors.keyboard = item.index;
+    pendingFocus = focus ? item.index : -1;
+    window.scrollTo({ top: target * maxScroll(), behavior: 'instant' });
+    aim(Math.atan2(dx, dz) - heading, up);
   }
   function aim(yaw, up = pitchTarget) {
     lookTarget = clamp(yaw, -maxLook, maxLook);
@@ -1963,12 +2079,13 @@ void main(){
   document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', e => {
     e.preventDefault(); go(button.dataset.go);
   }));
-  const onControl = target => target instanceof Element && target.closest('.masthead,.travel-bar');
+  const onControl = target => target instanceof Element && target.closest('.masthead,.travel-bar,dialog[open]');
   for (const type of ['wheel', 'keydown', 'pointerdown']) window.addEventListener(type, skipIntro, { passive: true });
   // Any input ends calm pacing at once.
   for (const type of ['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown'])
     window.addEventListener(type, () => { inputAt = performance.now(); }, { passive: true, capture: true });
   window.addEventListener('pointermove', event => {
+    if (reading) return;
     if (event.pointerType === 'touch') {
       if (touch && event.pointerId === touch.id)
         aim(touch.look + (event.clientX - touch.x) / innerWidth * 1.9, touch.pitch - (event.clientY - touch.y) / innerHeight * 1.2);
@@ -1986,7 +2103,7 @@ void main(){
       if (Math.hypot(event.clientX - tour.pointer.x, event.clientY - tour.pointer.y) < Math.min(innerWidth, innerHeight) * .18) return;
       takeOver();
     }
-    monitors.keyboard = -1;
+    monitors.keyboard = -1; pendingFocus = -1;
     // Absolute mapping: where the pointer sits in the scene is where the camera looks.
     // Right looks right, up looks up; the crosshair stays in the middle of the screen.
     const v = clamp((event.clientY - band.top) / (band.bottom - band.top)) * 2 - 1;
@@ -1999,7 +2116,7 @@ void main(){
     takeOver();
     if (event.pointerType !== 'touch') return;
     touch = { id: event.pointerId, x: event.clientX, y: event.clientY, look: lookTarget, pitch: pitchTarget };
-    monitors.keyboard = -1;
+    monitors.keyboard = -1; pendingFocus = -1;
   }, { passive: true });
   for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, () => { touch = null; }, { passive: true });
   // With the cursor hidden, a click acts on whatever link sits under the crosshair.
@@ -2019,6 +2136,7 @@ void main(){
   monitors.items.forEach(item => item.element.addEventListener('focus', event => {
     if (event.target !== item.element) return;
     takeOver();
+    if (Math.abs(target - item.station) > .001) { go(item.index, false); return; }
     monitors.keyboard = item.index;
     const dx = item.anchor.x - scene.cameraX, dz = item.anchor.z - scene.camera;
     // Face the screen and put the crosshair on the middle of its opened panel.
@@ -2026,12 +2144,13 @@ void main(){
     aim(Math.atan2(dx, dz) - scene.heading, up);
   }));
   document.addEventListener('keydown', event => {
+    if (reading) return;
     if (event.target.closest('input,textarea,select,[contenteditable=true]')) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault(); takeOver(); monitors.keyboard = -1;
       aim(lookTarget + (event.key === 'ArrowRight' ? .12 : -.12));
     }
-    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); go(event.key === 'Home' ? 0 : 3); }
+    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); go(event.key === 'Home' ? 0 : monitors.items.length - 1); }
     if (event.key === 'Escape' && monitors.keyboard >= 0) { monitors.keyboard = -1; document.activeElement?.blur?.(); aim(0, 0); }
     if (event.code === 'Space' && !event.target.closest('button,a')) { event.preventDefault(); toggleAuto(); }
   });
@@ -2050,10 +2169,20 @@ void main(){
     if (reduced) { boot = BOOT_END; root.classList.remove('fx-intro'); }
     wake();
   });
+  document.addEventListener('research:open', () => {
+    pausedBeforeReading = paused; reading = true;
+    takeOver(); paused = true; pendingFocus = -1;
+    boot = BOOT_END; root.classList.remove('fx-intro'); window.RoadFx?.hurry();
+    cancelAnimationFrame(raf); raf = 0; controls();
+  });
+  document.addEventListener('research:close', () => {
+    reading = false; paused = pausedBeforeReading || reducedQuery.matches;
+    controls(); last = 0; dirty = true; wake();
+  });
   scene.onready = () => { dirty = true; wake(); };
   monitors.onmeasured = () => { dirty = true; wake(); };
   // Read-only diagnostics used by local regression checks; no user data or APIs.
-  window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, time,
+  window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, reading, time,
     boot, warp: scene.warp, velocity: scene.velocity, reach: scene.reach, baseFocal: scene.baseFocal, meteor: !!scene.sky.meteor,
     tour: tour.phase, tourIndex: tour.index, acted,
     view: { x: scene.cameraX, z: scene.camera, yaw: scene.yaw, heading: scene.heading, pitch: scene.pitch, focal: scene.focal,
@@ -2066,6 +2195,86 @@ void main(){
   window.__skySample = (axis, at) => scene.sky.sample(axis, at);
   measureBand(); measureScroll();
   target = clamp(scrollY / maxScroll()); controls(); wake();
+})();
+
+</script>
+  <script>/* assets/research.js */
+/* Public summaries only. The reader works independently of the scene renderer. */
+(() => {
+  'use strict';
+  const dialog = document.getElementById('researchDialog');
+  const heading = document.getElementById('researchHeading');
+  const panels = [...dialog.querySelectorAll('[data-paper-panel]')];
+  const tabs = [...dialog.querySelectorAll('[data-paper-tab]')];
+  const valid = id => panels.some(panel => panel.dataset.paperPanel === id);
+  const fromHash = () => location.hash.startsWith('#paper-') ? location.hash.slice(7) : '';
+  let returnFocus = null, returnHash = '', ownsEntry = false;
+
+  function show(id) {
+    if (!valid(id)) return;
+    const opening = !dialog.open;
+    if (opening) {
+      returnFocus = document.activeElement;
+      document.body.classList.add('reading');
+      dialog.showModal();
+      document.dispatchEvent(new Event('research:open'));
+    }
+    panels.forEach(panel => {
+      panel.hidden = panel.dataset.paperPanel !== id;
+      if (!panel.hidden) heading.textContent = panel.dataset.title;
+    });
+    tabs.forEach(tab => tab.setAttribute('aria-pressed', String(tab.dataset.paperTab === id)));
+    dialog.querySelector('.research-scroll').scrollTop = 0;
+    heading.focus({ preventScroll: true });
+  }
+
+  function syncHash() {
+    const id = fromHash();
+    if (valid(id)) show(id);
+    else if (dialog.open) dialog.close();
+  }
+
+  function open(id) {
+    if (!valid(id)) return;
+    if (!dialog.open) {
+      returnHash = location.hash;
+      ownsEntry = true;
+      history.pushState(history.state, '', `#paper-${id}`);
+    } else history.replaceState(history.state, '', `#paper-${id}`);
+    show(id);
+  }
+
+  function close() {
+    if (ownsEntry) { ownsEntry = false; history.back(); }
+    else {
+      history.replaceState(history.state, '', `${location.pathname}${location.search}${returnHash}`);
+      dialog.close();
+    }
+  }
+
+  document.querySelectorAll('[data-open-paper]').forEach(link => link.addEventListener('click', event => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button > 0) return;
+    event.preventDefault();
+    open(link.dataset.openPaper);
+  }));
+  tabs.forEach(tab => tab.addEventListener('click', () => open(tab.dataset.paperTab)));
+  document.getElementById('closeResearch').addEventListener('click', close);
+  dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+  dialog.addEventListener('click', event => {
+    if (event.target !== dialog) return;
+    const r = dialog.getBoundingClientRect();
+    if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) close();
+  });
+  dialog.addEventListener('close', () => {
+    document.body.classList.remove('reading');
+    document.dispatchEvent(new Event('research:close'));
+    const focus = returnFocus?.isConnected && !returnFocus.closest('[inert]') ? returnFocus : document.getElementById('researchButton');
+    focus?.focus({ preventScroll: true });
+    ownsEntry = false;
+  });
+  addEventListener('popstate', syncHash);
+  addEventListener('hashchange', syncHash);
+  syncHash();
 })();
 
 </script>

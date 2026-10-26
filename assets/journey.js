@@ -8,13 +8,20 @@
   const dots = [...document.querySelectorAll('.route-stop')];
   // The scroll range only changes on resize; reading scrollHeight per event could force layout.
   let scrollRange = 1;
-  const measureScroll = () => { scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight); };
+  const measureScroll = () => {
+    scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    document.querySelectorAll('.scroll-runway > span').forEach((anchor, index) => {
+      const item = monitors.items[index];
+      if (item) anchor.style.top = `${item.station * scrollRange}px`;
+    });
+  };
   const maxScroll = () => scrollRange;
   const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
   // Look limits in radians: yaw either way, pitch up / down.
   const maxLook = 1.1, maxUp = .42, maxDown = .3;
   let target = 0, camera = 0, lookTarget = 0, look = 0, pitchTarget = 0, pitch = 0;
   let paused = reducedQuery.matches, reduced = reducedQuery.matches;
+  let reading = false, pausedBeforeReading = paused, pendingFocus = -1;
   let auto = false, autoTop = 0, scenery = false, raf = 0, last = 0, time = 0, dirty = true;
   let touch = null, aiming = false, overControls = false, band = { top: 0, bottom: innerHeight }, reticleState = '', renderMs = 0;
   // Arrival: the boot clock drives the scene's timeline (RoadScene.effects) and the title
@@ -107,7 +114,9 @@
   // Last values written to the DOM, so a frame only touches what actually changed.
   const shown = { fill: '', text: '', current: -1, intro: -1, hyper: '', hyperVis: 'hidden' };
   function ui() {
-    const fill = `scaleX(${target.toFixed(3)})`, text = `${Math.round(target * 100)}%`, current = Math.round(target * 3);
+    const fill = `scaleX(${target.toFixed(3)})`, text = `${Math.round(target * 100)}%`;
+    const current = monitors.items.reduce((nearest, item, index, items) =>
+      Math.abs(item.station - target) < Math.abs(items[nearest].station - target) ? index : nearest, 0);
     if (fill !== shown.fill) $('progressFill').style.transform = shown.fill = fill;
     if (text !== shown.text) $('progressText').textContent = shown.text = text;
     if (current !== shown.current) {
@@ -133,7 +142,7 @@
     const state = overControls ? 'idle' : monitors.aim;
     if (state !== reticleState) { reticle.dataset.state = reticleState = state; }
   }
-  function wake() { if (!raf && !document.hidden) raf = requestAnimationFrame(frame); }
+  function wake() { if (!raf && !document.hidden && !reading) raf = requestAnimationFrame(frame); }
   const costs = new Float32Array(240), gaps = new Float32Array(240); let costAt = 0, gapAt = 0, chained = false;
   // Frame pacing: drawn frames land on a whole number of display refreshes (about
   // 55–90 fps), so a 165 Hz panel gets evenly spaced frames at 82.5 fps instead of
@@ -202,6 +211,13 @@
       monitors.drawStands();
       renderMs += (performance.now() - t0 - renderMs) * .1;
       ui(); dirty = false;
+      if (pendingFocus >= 0) {
+        const item = monitors.items[pendingFocus];
+        if (Math.abs(camera - item.station) < .001 && item.visible && item.opening > .95) {
+          pendingFocus = -1;
+          item.element.focus({ preventScroll: true });
+        }
+      }
     }
     chained = !paused || changing || settling;
     if (chained) wake();
@@ -212,10 +228,20 @@
     if (tour.phase !== 'idle' && monitors.keyboard === tour.index && document.activeElement !== monitors.items[tour.index].element) monitors.keyboard = -1;
     tour.phase = 'idle'; auto = false; controls();
   }
-  function go(index) {
+  function go(index, focus = true) {
     acted = true; stopAuto();
-    const station = monitors.items[clamp(Number(index), 0, 3)].station;
-    window.scrollTo({ top: station * maxScroll(), behavior: reduced ? 'instant' : 'smooth' });
+    const item = monitors.items[clamp(Math.round(Number(index)), 0, monitors.items.length - 1)];
+    if (!item) return;
+    boot = BOOT_END; root.classList.remove('fx-intro'); window.RoadFx?.hurry();
+    const z = item.station * scene.routeLength, x = scene.center(z);
+    const heading = Math.atan2(scene.center(z + 28) - x, 28);
+    const dx = item.anchor.x - x, dz = item.anchor.z - z;
+    const up = Math.atan2(monitors.openMiddle(item) - 3.6, Math.hypot(dx, dz)) - Math.atan((scene.baseHorizon - scene.aimY) / scene.baseFocal);
+    target = item.station;
+    monitors.keyboard = item.index;
+    pendingFocus = focus ? item.index : -1;
+    window.scrollTo({ top: target * maxScroll(), behavior: 'instant' });
+    aim(Math.atan2(dx, dz) - heading, up);
   }
   function aim(yaw, up = pitchTarget) {
     lookTarget = clamp(yaw, -maxLook, maxLook);
@@ -248,12 +274,13 @@
   document.querySelectorAll('[data-go]').forEach(button => button.addEventListener('click', e => {
     e.preventDefault(); go(button.dataset.go);
   }));
-  const onControl = target => target instanceof Element && target.closest('.masthead,.travel-bar');
+  const onControl = target => target instanceof Element && target.closest('.masthead,.travel-bar,dialog[open]');
   for (const type of ['wheel', 'keydown', 'pointerdown']) window.addEventListener(type, skipIntro, { passive: true });
   // Any input ends calm pacing at once.
   for (const type of ['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown'])
     window.addEventListener(type, () => { inputAt = performance.now(); }, { passive: true, capture: true });
   window.addEventListener('pointermove', event => {
+    if (reading) return;
     if (event.pointerType === 'touch') {
       if (touch && event.pointerId === touch.id)
         aim(touch.look + (event.clientX - touch.x) / innerWidth * 1.9, touch.pitch - (event.clientY - touch.y) / innerHeight * 1.2);
@@ -271,7 +298,7 @@
       if (Math.hypot(event.clientX - tour.pointer.x, event.clientY - tour.pointer.y) < Math.min(innerWidth, innerHeight) * .18) return;
       takeOver();
     }
-    monitors.keyboard = -1;
+    monitors.keyboard = -1; pendingFocus = -1;
     // Absolute mapping: where the pointer sits in the scene is where the camera looks.
     // Right looks right, up looks up; the crosshair stays in the middle of the screen.
     const v = clamp((event.clientY - band.top) / (band.bottom - band.top)) * 2 - 1;
@@ -284,7 +311,7 @@
     takeOver();
     if (event.pointerType !== 'touch') return;
     touch = { id: event.pointerId, x: event.clientX, y: event.clientY, look: lookTarget, pitch: pitchTarget };
-    monitors.keyboard = -1;
+    monitors.keyboard = -1; pendingFocus = -1;
   }, { passive: true });
   for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, () => { touch = null; }, { passive: true });
   // With the cursor hidden, a click acts on whatever link sits under the crosshair.
@@ -304,6 +331,7 @@
   monitors.items.forEach(item => item.element.addEventListener('focus', event => {
     if (event.target !== item.element) return;
     takeOver();
+    if (Math.abs(target - item.station) > .001) { go(item.index, false); return; }
     monitors.keyboard = item.index;
     const dx = item.anchor.x - scene.cameraX, dz = item.anchor.z - scene.camera;
     // Face the screen and put the crosshair on the middle of its opened panel.
@@ -311,12 +339,13 @@
     aim(Math.atan2(dx, dz) - scene.heading, up);
   }));
   document.addEventListener('keydown', event => {
+    if (reading) return;
     if (event.target.closest('input,textarea,select,[contenteditable=true]')) return;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault(); takeOver(); monitors.keyboard = -1;
       aim(lookTarget + (event.key === 'ArrowRight' ? .12 : -.12));
     }
-    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); go(event.key === 'Home' ? 0 : 3); }
+    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); go(event.key === 'Home' ? 0 : monitors.items.length - 1); }
     if (event.key === 'Escape' && monitors.keyboard >= 0) { monitors.keyboard = -1; document.activeElement?.blur?.(); aim(0, 0); }
     if (event.code === 'Space' && !event.target.closest('button,a')) { event.preventDefault(); toggleAuto(); }
   });
@@ -335,10 +364,20 @@
     if (reduced) { boot = BOOT_END; root.classList.remove('fx-intro'); }
     wake();
   });
+  document.addEventListener('research:open', () => {
+    pausedBeforeReading = paused; reading = true;
+    takeOver(); paused = true; pendingFocus = -1;
+    boot = BOOT_END; root.classList.remove('fx-intro'); window.RoadFx?.hurry();
+    cancelAnimationFrame(raf); raf = 0; controls();
+  });
+  document.addEventListener('research:close', () => {
+    reading = false; paused = pausedBeforeReading || reducedQuery.matches;
+    controls(); last = 0; dirty = true; wake();
+  });
   scene.onready = () => { dirty = true; wake(); };
   monitors.onmeasured = () => { dirty = true; wake(); };
   // Read-only diagnostics used by local regression checks; no user data or APIs.
-  window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, time,
+  window.__routeDiagnostics = () => ({ progress: target, camera, look, lookTarget, pitch, pitchTarget, auto, paused, reading, time,
     boot, warp: scene.warp, velocity: scene.velocity, reach: scene.reach, baseFocal: scene.baseFocal, meteor: !!scene.sky.meteor,
     tour: tour.phase, tourIndex: tour.index, acted,
     view: { x: scene.cameraX, z: scene.camera, yaw: scene.yaw, heading: scene.heading, pitch: scene.pitch, focal: scene.focal,

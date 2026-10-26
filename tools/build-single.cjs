@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const site = path.resolve(process.argv[2] || '.');
 const out = path.resolve(process.argv[3] || path.join(site, 'starway-standalone.html'));
-const read = rel => fs.readFileSync(path.join(site, rel), 'utf8');
+const read = rel => fs.readFileSync(path.join(site, rel.split(/[?#]/)[0]), 'utf8');
 let html = read('index.html'), styles = 0, scripts = 0;
 html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (m, href) => { styles++; return `<style>\n${read(href)}\n</style>`; });
 html = html.replace(/<script src="([^"]+)"( defer)?><\/script>/g, (m, src) => {
